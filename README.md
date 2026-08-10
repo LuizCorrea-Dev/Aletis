@@ -10,7 +10,7 @@
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16%20%2B%20pgvector-4169E1?style=for-the-badge&logo=postgresql)](https://www.postgresql.org/)
 [![Ollama](https://img.shields.io/badge/Ollama-Dual--Brain%20AI-000000?style=for-the-badge&logo=ollama)](https://ollama.ai/)
 [![Docker](https://img.shields.io/badge/Docker-Self--Hosted-2496ED?style=for-the-badge&logo=docker)](https://www.docker.com/)
-[![License](https://img.shields.io/badge/License-MIT-green.svg?style=for-the-badge)](LICENSE)
+[![License](https://img.shields.io/badge/License-All%20Rights%20Reserved-red.svg?style=for-the-badge)](LICENSE)
 
 > **"Não queremos que o utilizador fique viciado, queremos que ele se sinta nutrido."**
 
@@ -144,7 +144,7 @@ pnpm dev
 
 ## 📜 Licença
 
-Este projeto está sob a licença [MIT](LICENSE).
+Este projeto está sob licença **Proprietária — Todos os Direitos Reservados**. Consulte o arquivo [LICENSE](LICENSE) para mais detalhes.
 
 ---
 
