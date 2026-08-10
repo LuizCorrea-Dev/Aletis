@@ -1,0 +1,12 @@
+/* Design Tokens de Tiers de Perfil (Aletis Versão 2) */
+
+:root {
+  --tier-comum-color: #ebe700;
+  --tier-comum-bg: rgba(235, 231, 0, 0.15);
+  
+  --tier-ancora-color: #57da00;
+  --tier-ancora-bg: rgba(87, 218, 0, 0.15);
+  
+  --tier-verificado-color: #38bdf8;
+  --tier-verificado-bg: rgba(56, 189, 248, 0.15);
+}

@@ -1,0 +1,11 @@
+/* Concentrador de Temas Visuais */
+@import "./original.css";
+@import "./tier.css";
+
+/* 
+ * Futuros temas podem ser registrados aqui:
+ * @import "./natal.css";
+ * @import "./ano-novo.css";
+ * @import "./aniversario.css";
+ * @import "./light.css";
+ */

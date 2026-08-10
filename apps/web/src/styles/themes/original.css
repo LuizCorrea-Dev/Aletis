@@ -1,0 +1,41 @@
+/* Tema Padrão: Original (Aletis Dark Mode) */
+:root,
+[data-theme="original"] {
+  color-scheme: dark;
+
+  /* Paleta Primária - Mint */
+  --theme-mint-400: #50c878;
+  --theme-mint-500: #3eb566;
+  --theme-mint-600: #2ca254;
+
+  /* Paleta Secundária - Gold */
+  --theme-gold-400: #FFC300;
+  --theme-gold-500: #e5af00;
+  --theme-gold-600: #cc9c00;
+
+  /* Variáveis Semânticas do Tema */
+  --theme-background: #0f172a;
+  --theme-foreground: #f8fafc; /* Slate 50 */
+
+  --theme-surface: rgba(30, 41, 59, 0.7); /* Slate 800 semi-transparent */
+  --theme-surface-hover: #334155; /* Slate 700 */
+  --theme-surface-active: #475569; /* Slate 600 */
+
+  --theme-input-bg: #f1f5f9;
+  --theme-input-text: #1e293b;
+  --theme-input-placeholder: #64748b;
+
+  --theme-border: rgba(255, 255, 255, 0.1);
+  --theme-border-subtle: #1e293b;
+
+  --theme-muted: #94a3b8; /* Slate 400 */
+  --theme-muted-foreground: #cbd5e1; /* Slate 300 */
+
+  /* Destaques e Ações */
+  --theme-primary: #50c878;
+  --theme-primary-hover: #3eb566;
+  --theme-primary-active: #2ca254;
+
+  --theme-accent: #50c878;
+  --theme-accent-hover: #3eb566;
+}

@@ -1,0 +1,78 @@
+@import "tailwindcss";
+@import "../styles/tokens/layout.css";
+@import "../styles/themes/index.css";
+
+@theme {
+  /* Cores Dinâmicas de Temas */
+  --color-mint-400: var(--theme-mint-400);
+  --color-mint-500: var(--theme-mint-500);
+  --color-mint-600: var(--theme-mint-600);
+
+  --color-gold-400: var(--theme-gold-400);
+  --color-gold-500: var(--theme-gold-500);
+  --color-gold-600: var(--theme-gold-600);
+
+  --color-background: var(--theme-background);
+  --color-foreground: var(--theme-foreground);
+  
+  --color-surface: var(--theme-surface);
+  --color-surface-hover: var(--theme-surface-hover);
+  --color-surface-active: var(--theme-surface-active);
+  
+  --color-border: var(--theme-border);
+  --color-border-subtle: var(--theme-border-subtle);
+
+  --color-muted: var(--theme-muted);
+  --color-muted-foreground: var(--theme-muted-foreground);
+
+  --color-primary: var(--theme-primary);
+  --color-primary-hover: var(--theme-primary-hover);
+  --color-primary-active: var(--theme-primary-active);
+
+  --color-accent: var(--theme-accent);
+  --color-accent-hover: var(--theme-accent-hover);
+
+  /* Cores de Tiers de Perfil */
+  --color-tier-comum: var(--tier-comum-color);
+  --color-tier-ancora: var(--tier-ancora-color);
+  --color-tier-verificado: var(--tier-verificado-color);
+
+  /* Fontes Customizadas */
+  --font-sans: var(--font-sans);
+  --font-display: var(--font-display);
+
+  /* Raio de Bordas */
+  --radius-sm: var(--radius-sm);
+  --radius-md: var(--radius-md);
+  --radius-lg: var(--radius-lg);
+  --radius-xl: var(--radius-xl);
+  --radius-2xl: var(--radius-2xl);
+  --radius-full: var(--radius-full);
+}
+
+body {
+  background-color: var(--color-background);
+  color: var(--color-foreground);
+  font-family: var(--font-sans), sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Utilitário global para a animação Shimmer */
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+.animate-shimmer {
+  background: linear-gradient(90deg, 
+    rgba(30, 41, 59, 0.4) 25%, 
+    rgba(51, 65, 85, 0.6) 50%, 
+    rgba(30, 41, 59, 0.4) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 2s infinite linear;
+}

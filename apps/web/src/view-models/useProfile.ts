@@ -1,0 +1,134 @@
+import { useState, useCallback, useEffect } from "react";
+import { getCurrentUserProfileAction } from "@/app/actions/user-actions";
+import { getPostsAction } from "@/app/actions/post-actions";
+import {
+  getUserAtrioItemsAction,
+  getUserAtrioListsAction,
+  AtrioItemData,
+  AtrioListData,
+} from "@/app/actions/atrio-actions";
+import { getUserCommunitiesAction } from "@/app/actions/community-actions";
+
+export interface ProfileUser {
+  id: string;
+  email: string;
+  name: string;
+  username: string;
+  status: string;
+  avatarUrl: string;
+  bannerUrl: string;
+  bio: string;
+  vibesCount: number;
+  tipoPerfil?: "comum" | "ancora" | "verificado";
+  phone?: string;
+  countryCode?: string;
+}
+
+export interface UserCommunityItem {
+  id: string;
+  name: string;
+  description: string;
+  avatarUrl: string;
+  bannerUrl?: string;
+  privacy?: string;
+  role: "OWNER" | "MODERATOR" | "MEMBER";
+  isSuspended: boolean;
+}
+
+export function useProfile() {
+  const [user, setUser] = useState<ProfileUser | null>(null);
+  const [posts, setPosts] = useState<any[]>([]);
+  const [atrioItems, setAtrioItems] = useState<AtrioItemData[]>([]);
+  const [atrioLists, setAtrioLists] = useState<AtrioListData[]>([]);
+  const [userCommunities, setUserCommunities] = useState<UserCommunityItem[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState<"posts" | "atrio" | "groups" | "following" | "connections" | "vibes" | "reels" | "saved">("posts");
+  const [activeSubTab, setActiveSubTab] = useState<"all" | "media" | "anonymous">("all");
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [editingPost, setEditingPost] = useState<any | null>(null);
+  const [selectedPost, setSelectedPost] = useState<any | null>(null);
+
+  const fetchProfileData = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const authUser = await getCurrentUserProfileAction();
+      if (!authUser) return;
+
+      setUser({
+        id: authUser.id,
+        email: authUser.email || "",
+        name: authUser.name,
+        username: authUser.username,
+        status: authUser.status || "Em busca de equilíbrio em paz",
+        bio: authUser.bio || "Compartilhando vibes de harmonia.",
+        avatarUrl: authUser.avatarUrl || `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(authUser.name)}`,
+        bannerUrl: authUser.bannerUrl || "https://images.unsplash.com/photo-1557683316-973673baf926?auto=format&fit=crop&w=1200&q=80",
+        vibesCount: authUser.vibes || 0,
+        tipoPerfil: authUser.tipoPerfil || "comum",
+        phone: authUser.phone || "",
+        countryCode: authUser.countryCode || "+55",
+      });
+
+      const userPosts = await getPostsAction(undefined, undefined, 1);
+      setPosts(userPosts || []);
+
+      const atrioData = await getUserAtrioItemsAction(authUser.id);
+      setAtrioItems(atrioData);
+
+      const listsData = await getUserAtrioListsAction();
+      setAtrioLists(listsData);
+
+      const comms = await getUserCommunitiesAction(authUser.id);
+      setUserCommunities(
+        comms.map((c) => ({
+          id: c.id,
+          name: c.name,
+          description: c.description,
+          avatarUrl: c.avatarUrl,
+          bannerUrl: c.bannerUrl,
+          privacy: c.privacy,
+          role: "MEMBER",
+          isSuspended: false,
+        }))
+      );
+    } catch (err) {
+      console.error("Erro ao carregar perfil:", err);
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchProfileData();
+  }, [fetchProfileData]);
+
+  const filteredPosts = posts.filter((p) => {
+    if (activeSubTab === "media") return Boolean(p.media_url || p.mediaUrl);
+    if (activeSubTab === "anonymous") return Boolean(p.is_author_anonymous || p.isAuthorAnonymous);
+    return true;
+  });
+
+  return {
+    user,
+    posts: filteredPosts,
+    atrioItems,
+    atrioLists,
+    userCommunities,
+    allPostsCount: posts.length,
+    isLoading,
+    activeTab,
+    activeSubTab,
+    isSettingsOpen,
+    isCreateOpen,
+    editingPost,
+    selectedPost,
+    setActiveTab,
+    setActiveSubTab,
+    setIsSettingsOpen,
+    setIsCreateOpen,
+    setEditingPost,
+    setSelectedPost,
+    reload: fetchProfileData,
+  };
+}
