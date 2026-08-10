@@ -104,11 +104,24 @@ cp .env.example .env
 Um único comando inicializa o PostgreSQL com `pgvector`, baixa/inicia o Ollama com os modelos de IA e compila a aplicação Web:
 
 ```bash
+# Iniciar e compilar todos os containers
 docker compose up --build
 ```
 
 Após a inicialização dos containers, acesse a aplicação em:  
 👉 **[http://localhost:3000](http://localhost:3000)**
+
+---
+
+### 🐳 Comandos Úteis do Docker
+
+| Ação | Comando |
+| :--- | :--- |
+| **Iniciar / Compilar** | `docker compose up --build` |
+| **Iniciar em segundo plano (modo detached)** | `docker compose up -d --build` |
+| **Parar a aplicação** | `docker compose down` |
+| **Parar e remover volumes (limpeza total)** | `docker compose down -v` |
+| **Acompanhar logs em tempo real** | `docker compose logs -f` |
 
 ---
 
