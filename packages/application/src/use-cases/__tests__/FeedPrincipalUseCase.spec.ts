@@ -113,7 +113,7 @@ describe("FeedPrincipal & Post Management Use Cases", () => {
       expect(result.success).toBe(true);
       expect(result.safe).toBe(true);
       expect(result.message).toBe("Post publicado!");
-      expect(postRepositoryMock.createPost).toHaveBeenCalledWith(postData);
+      expect(postRepositoryMock.createPost).toHaveBeenCalledWith(postData, undefined);
     });
 
     it("deve respeitar as configurações de 'Quem pode ver' ao criar um post", async () => {
@@ -132,7 +132,7 @@ describe("FeedPrincipal & Post Management Use Cases", () => {
 
       expect(result.success).toBe(true);
       expect(result.safe).toBe(true);
-      expect(postRepositoryMock.createPost).toHaveBeenCalledWith(postData);
+      expect(postRepositoryMock.createPost).toHaveBeenCalledWith(postData, undefined);
     });
 
     it("deve barrar a criação do post na Camada 1 se houver spam de caracteres repetidos sem consumir a IA", async () => {
