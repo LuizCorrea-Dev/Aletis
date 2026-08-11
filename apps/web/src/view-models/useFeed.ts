@@ -85,11 +85,45 @@ export function useFeed(initialTag?: string, communityId?: string) {
     await deletePostAction(postId);
   };
 
+  // Frequência das tags presentes nos posts
+  const DEFAULT_TAGS = ["gratidão", "paz", "superação", "leveza", "amor", "crescimento", "mindfulness", "esperança", "conexão", "cura"];
+
+  const tagCountsMap: Record<string, number> = {};
+  posts.forEach((post) => {
+    (post.tags || []).forEach((t) => {
+      const clean = t.replace(/^#/, "").trim().toLowerCase();
+      if (clean) {
+        tagCountsMap[clean] = (tagCountsMap[clean] || 0) + 1;
+      }
+    });
+  });
+
+  const sortedTagsFromPosts = Object.entries(tagCountsMap)
+    .sort((a, b) => b[1] - a[1])
+    .map(([tag, count]) => ({ tag, count }));
+
+  const top5Set = new Set(sortedTagsFromPosts.map((t) => t.tag));
+  DEFAULT_TAGS.forEach((def) => {
+    if (top5Set.size < 5) {
+      top5Set.add(def);
+    }
+  });
+
+  const top5Tags = Array.from(top5Set).slice(0, 5);
+  const allTagsList = Array.from(
+    new Set([...sortedTagsFromPosts.map((t) => t.tag), ...DEFAULT_TAGS])
+  ).map((tag) => ({
+    tag,
+    count: tagCountsMap[tag] || 0,
+  }));
+
   return {
     posts: optimisticPosts,
     isLoading,
     isPending,
     selectedTag,
+    top5Tags,
+    allTagsList,
     isCreateOpen,
     editingPost,
     setIsCreateOpen,

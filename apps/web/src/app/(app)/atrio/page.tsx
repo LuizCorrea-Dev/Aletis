@@ -1,9 +1,10 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Sparkles, Bookmark, Share2 } from "lucide-react";
+import { Sparkles, Bookmark, Share2, FileText, Download, Film, Image as ImageIcon, Plus, X } from "lucide-react";
 import { getAtrioItemsAction, AtrioItemData } from "@/app/actions/atrio-actions";
 import { SaveToListModal } from "@/components/features/SaveToListModal";
+import { CreateAtrioModal } from "@/components/features/CreateAtrioModal";
 import { VibeZapButton, CommentSection } from "@/components/molecules";
 
 interface AtrioItem {
@@ -23,68 +24,125 @@ export default function AtrioPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [selectedItem, setSelectedItem] = useState<AtrioItem | null>(null);
   const [savingItemToList, setSavingItemToList] = useState<AtrioItem | null>(null);
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [tagFilter, setTagFilter] = useState("");
 
-  useEffect(() => {
-    const fetchAtrioItems = async () => {
-      setIsLoading(true);
-      try {
-        const atrioData = await getAtrioItemsAction();
+  const renderAtrioMedia = (url: string, isModal: boolean = false) => {
+    if (!url) return null;
 
-        const mappedAtrio: AtrioItem[] = (atrioData || []).map((row) => ({
-          id: row.id,
-          title: row.title || "Contemplação",
-          description: row.description || "",
-          url: row.url,
-          color: row.color || "bg-[#50c878]",
-          vibes: row.vibesCount || 0,
-          tags: row.tags || [],
-          authorName: row.authorName || "Artista Aletis",
-        }));
+    const isVideo =
+      url.startsWith("data:video/") ||
+      url.endsWith(".mp4") ||
+      url.endsWith(".webm") ||
+      url.includes("video");
+    const isPdf = url.startsWith("data:application/pdf") || url.endsWith(".pdf");
 
-        if (mappedAtrio.length > 0) {
-          setItems(mappedAtrio);
-        } else {
-          setItems([
-            {
-              id: "1",
-              title: "Serenidade Matinal",
-              description: "A paz que habita no silêncio da manhã transforma o olhar sobre a vida.",
-              url: "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=800&q=80",
-              color: "bg-[#50c878]",
-              vibes: 42,
-              tags: ["paz", "silêncio", "manhã"],
-              authorName: "Aletis Art",
-            },
-            {
-              id: "2",
-              title: "Luz entre as Árvores",
-              description: "Mesmo nas florestas mais densas, a luz sempre encontra um caminho.",
-              url: "https://images.unsplash.com/photo-1448375240586-882707db888b?auto=format&fit=crop&w=800&q=80",
-              color: "bg-[#2dd4bf]",
-              vibes: 28,
-              tags: ["natureza", "esperança", "floresta"],
-              authorName: "Alma Livre",
-            },
-            {
-              id: "3",
-              title: "Horizontes Infinitos",
-              description: "Encontre espaço para respirar e contemplar a vastidão do universo.",
-              url: "https://images.unsplash.com/photo-1518837695005-2083093ee35b?auto=format&fit=crop&w=800&q=80",
-              color: "bg-[#3b82f6]",
-              vibes: 56,
-              tags: ["universo", "horizonte", "meditação"],
-              authorName: "Horizonte",
-            },
-          ]);
-        }
-      } catch (err) {
-        console.error("Erro ao carregar o Átrio:", err);
-      } finally {
-        setIsLoading(false);
+    if (isVideo) {
+      return (
+        <video
+          src={url}
+          controls
+          muted
+          playsInline
+          preload="metadata"
+          className="w-full h-full object-cover bg-black"
+        />
+      );
+    }
+
+    if (isPdf) {
+      return (
+        <div className="w-full h-full bg-slate-900 border border-slate-800 p-6 flex flex-col items-center justify-center text-center gap-3">
+          <div className="p-4 bg-amber-500/20 text-amber-400 rounded-2xl">
+            <FileText size={40} />
+          </div>
+          <div>
+            <h4 className="text-sm font-bold text-white mb-1">Documento PDF Anexo</h4>
+            <p className="text-xs text-slate-400">Clique para visualizar e baixar</p>
+          </div>
+          {isModal && (
+            <a
+              href={url}
+              download="atrio_documento.pdf"
+              onClick={(e) => e.stopPropagation()}
+              className="mt-2 px-4 py-2 bg-amber-500 hover:bg-amber-400 text-slate-950 rounded-xl font-bold text-xs flex items-center gap-2 transition-colors cursor-pointer"
+            >
+              <Download size={14} /> Baixar PDF
+            </a>
+          )}
+        </div>
+      );
+    }
+
+    return (
+      <img
+        src={url}
+        alt="Obra Átrio"
+        className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+      />
+    );
+  };
+
+  const fetchAtrioItems = async () => {
+    setIsLoading(true);
+    try {
+      const atrioData = await getAtrioItemsAction();
+
+      const mappedAtrio: AtrioItem[] = (atrioData || []).map((row) => ({
+        id: row.id,
+        title: row.title || "Contemplação",
+        description: row.description || "",
+        url: row.url,
+        color: row.color || "bg-[#50c878]",
+        vibes: row.vibesCount || 0,
+        tags: row.tags || [],
+        authorName: row.authorName || "Artista Aletis",
+      }));
+
+      if (mappedAtrio.length > 0) {
+        setItems(mappedAtrio);
+      } else {
+        setItems([
+          {
+            id: "1",
+            title: "Serenidade Matinal",
+            description: "A paz que habita no silêncio da manhã transforma o olhar sobre a vida.",
+            url: "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=800&q=80",
+            color: "bg-[#50c878]",
+            vibes: 42,
+            tags: ["paz", "silêncio", "manhã"],
+            authorName: "Aletis Art",
+          },
+          {
+            id: "2",
+            title: "Luz entre as Árvores",
+            description: "Mesmo nas florestas mais densas, a luz sempre encontra um caminho.",
+            url: "https://images.unsplash.com/photo-1448375240586-882707db888b?auto=format&fit=crop&w=800&q=80",
+            color: "bg-[#2dd4bf]",
+            vibes: 28,
+            tags: ["natureza", "esperança", "floresta"],
+            authorName: "Alma Livre",
+          },
+          {
+            id: "3",
+            title: "Horizontes Infinitos",
+            description: "Encontre espaço para respirar e contemplar a vastidão do universo.",
+            url: "https://images.unsplash.com/photo-1518837695005-2083093ee35b?auto=format&fit=crop&w=800&q=80",
+            color: "bg-[#3b82f6]",
+            vibes: 56,
+            tags: ["universo", "horizonte", "meditação"],
+            authorName: "Horizonte",
+          },
+        ]);
       }
-    };
+    } catch (err) {
+      console.error("Erro ao carregar o Átrio:", err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
+  useEffect(() => {
     fetchAtrioItems();
   }, []);
 
@@ -110,7 +168,7 @@ export default function AtrioPage() {
               Átrio da <span className="text-[#2dd4bf]">Leveza</span>
             </h1>
             <p className="text-xs text-slate-400">
-              Galeria imersiva de artes e reflexões contemplativas.
+              Galeria imersiva de artes, vídeos e reflexões contemplativas.
             </p>
           </div>
         </div>
@@ -154,14 +212,10 @@ export default function AtrioPage() {
               onClick={() => setSelectedItem(item)}
               className="group relative h-80 rounded-3xl overflow-hidden border border-slate-800 bg-slate-900 cursor-pointer shadow-xl transition-all hover:border-[#2dd4bf]/50 hover:shadow-[0_0_24px_rgba(45,212,191,0.2)]"
             >
-              <img
-                src={item.url}
-                alt={item.title}
-                className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
-              />
-              <div className="absolute inset-0 bg-linear-to-t from-[#0f172a] via-[#0f172a]/40 to-transparent opacity-95 transition-opacity" />
+              {renderAtrioMedia(item.url, false)}
+              <div className="absolute inset-0 bg-linear-to-t from-[#0f172a] via-[#0f172a]/40 to-transparent opacity-95 transition-opacity pointer-events-none" />
 
-              <div className="absolute bottom-0 inset-x-0 p-5 space-y-2">
+              <div className="absolute bottom-0 inset-x-0 p-5 space-y-2 pointer-events-auto">
                 <div className="flex flex-wrap items-center gap-1.5">
                   <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-[#2dd4bf]/20 text-[#2dd4bf] border border-[#2dd4bf]/40">
                     Contemplação
@@ -215,29 +269,27 @@ export default function AtrioPage() {
       {/* Modal de Detalhe Imersivo */}
       {selectedItem && (
         <div
-          className="fixed inset-0 z-[200] bg-black/90 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in"
+          className="fixed inset-0 z-40 bg-black/85 backdrop-blur-md flex items-center justify-center pt-16 sm:pt-20 pb-20 sm:pb-24 px-3 sm:px-4 xl:p-4 animate-in fade-in"
           onClick={() => setSelectedItem(null)}
         >
           <div
-            className="bg-[#1e293b] w-full max-w-2xl max-h-[90vh] rounded-3xl border border-slate-700 shadow-2xl overflow-hidden flex flex-col relative"
+            className="bg-[#1e293b] w-full max-w-2xl max-h-[calc(100vh-9.5rem)] xl:max-h-[85vh] rounded-2xl sm:rounded-3xl border border-slate-700 shadow-2xl overflow-hidden flex flex-col relative my-auto"
+            style={{ borderRadius: "1rem" }}
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="relative h-80 w-full overflow-hidden bg-black">
-              <img
-                src={selectedItem.url}
-                alt={selectedItem.title}
-                className="w-full h-full object-cover"
-              />
+            <div className="relative h-64 sm:h-80 w-full overflow-hidden bg-black shrink-0">
+              {renderAtrioMedia(selectedItem.url, true)}
               <button
                 type="button"
                 onClick={() => setSelectedItem(null)}
-                className="absolute top-4 right-4 p-2 bg-black/60 text-white rounded-full hover:bg-black/80 transition-colors cursor-pointer"
+                className="absolute top-3 right-3 w-9 h-9 rounded-full bg-black/80 hover:bg-black text-white flex items-center justify-center transition-all cursor-pointer z-30 shadow-xl border border-white/30 shrink-0"
+                aria-label="Fechar modal"
               >
-                ✕
+                <X size={18} strokeWidth={2.5} />
               </button>
             </div>
 
-            <div className="p-6 space-y-4 overflow-y-auto">
+            <div className="p-4 sm:p-6 space-y-4 overflow-y-auto">
               <div className="space-y-1">
                 <h2 className="text-2xl font-extrabold text-white">{selectedItem.title}</h2>
                 {selectedItem.tags && selectedItem.tags.length > 0 && (
@@ -302,6 +354,28 @@ export default function AtrioPage() {
         <SaveToListModal
           itemId={savingItemToList.id}
           onClose={() => setSavingItemToList(null)}
+        />
+      )}
+
+      {/* Botão Flutuante (FAB) para Postar no Átrio */}
+      <button
+        type="button"
+        onClick={() => setIsCreateModalOpen(true)}
+        className="fixed bottom-24 right-6 xl:bottom-8 xl:right-10 z-[60] bg-gradient-to-r from-[#2dd4bf] to-[#50c878] text-slate-950 font-extrabold text-sm p-4 xl:px-5 xl:py-3.5 rounded-full shadow-[0_0_30px_rgba(45,212,191,0.5)] hover:scale-105 active:scale-95 transition-all flex items-center gap-2 cursor-pointer group shrink-0 w-auto"
+        title="Publicar Obra no Átrio"
+      >
+        <Plus size={22} strokeWidth={2.5} className="transition-transform group-hover:rotate-90 shrink-0" />
+        <span className="hidden xl:inline font-display tracking-wide whitespace-nowrap">Postar no Átrio</span>
+      </button>
+
+      {/* Modal de Criar Obra no Átrio */}
+      {isCreateModalOpen && (
+        <CreateAtrioModal
+          onClose={() => setIsCreateModalOpen(false)}
+          onSuccess={() => {
+            setIsCreateModalOpen(false);
+            fetchAtrioItems();
+          }}
         />
       )}
     </div>

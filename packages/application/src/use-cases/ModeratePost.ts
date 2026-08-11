@@ -86,7 +86,7 @@ export class ModeratePostUseCase {
       }
 
       // Salvar post aprovado no repositório de banco PostgreSQL local
-      const result = await this.postRepository.createPost(postData);
+      const result = await this.postRepository.createPost(postData, userId);
 
       return {
         ...result,

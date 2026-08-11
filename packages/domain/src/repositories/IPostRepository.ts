@@ -3,7 +3,7 @@ import { Post, CreatePostData, Comment, CreateCommentData } from "../schemas/pos
 export interface IPostRepository {
   getPosts(filterTag?: string, communityId?: string, page?: number): Promise<Post[]>;
   getUserPosts(userId: string, type?: "post" | "diary"): Promise<Post[]>;
-  createPost(data: CreatePostData): Promise<{ success: boolean; message: string }>;
+  createPost(data: CreatePostData, authorId?: string): Promise<{ success: boolean; message: string }>;
   deletePost(postId: string): Promise<{ success: boolean }>;
   updatePost(postId: string, content: string, tags: string[], mediaUrl?: string): Promise<boolean>;
   togglePin(postId: string, isPinned: boolean): Promise<boolean>;

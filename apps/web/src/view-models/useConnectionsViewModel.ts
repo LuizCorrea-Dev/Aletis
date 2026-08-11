@@ -209,29 +209,67 @@ export function useConnectionsViewModel(options: ConnectionsViewModelOptions = {
     }
   };
 
+  const [fileError, setFileError] = useState<string | null>(null);
+
   const uploadMedia = async (file: File) => {
     if (!file || !activeChat) return;
+    setFileError(null);
+
+    const fileSizeMB = file.size / (1024 * 1024);
+    const mimeType = file.type.toLowerCase();
+    const filename = file.name;
+    const extension = filename.includes(".") ? `.${filename.split(".").pop()?.toLowerCase()}` : "";
+
+    const MAX_IMAGE_SIZE_MB = 25;
+    const MAX_VIDEO_SIZE_MB = 200;
+    const MAX_PDF_SIZE_MB = 50;
+
+    const isImage = mimeType.startsWith("image/") || [".png", ".jpg", ".jpeg", ".webp", ".gif", ".heic", ".bmp", ".svg"].includes(extension);
+    const isVideo = mimeType.startsWith("video/") || [".mp4", ".webm", ".mov", ".mkv", ".avi", ".m4v"].includes(extension);
+    const isPdf = mimeType === "application/pdf" || extension === ".pdf";
+
+    if (isImage) {
+      if (fileSizeMB > MAX_IMAGE_SIZE_MB) {
+        setFileError(`Esta foto (${fileSizeMB.toFixed(1)} MB) é muito grande para enviar. O tamanho máximo permitido para fotos é de ${MAX_IMAGE_SIZE_MB} MB. Por favor, escolha uma imagem menor.`);
+        return;
+      }
+    } else if (isVideo) {
+      if (fileSizeMB > MAX_VIDEO_SIZE_MB) {
+        setFileError(`Este vídeo (${fileSizeMB.toFixed(1)} MB) é muito grande para enviar. O tamanho máximo permitido para vídeos é de ${MAX_VIDEO_SIZE_MB} MB. Por favor, escolha um vídeo menor.`);
+        return;
+      }
+    } else if (isPdf) {
+      if (fileSizeMB > MAX_PDF_SIZE_MB) {
+        setFileError(`Este documento PDF (${fileSizeMB.toFixed(1)} MB) é muito grande para enviar. O tamanho máximo permitido para arquivos é de ${MAX_PDF_SIZE_MB} MB. Por favor, escolha um arquivo menor.`);
+        return;
+      }
+    } else {
+      setFileError(`O formato do arquivo "${filename}" não é suportado. Você pode enviar Fotos (até ${MAX_IMAGE_SIZE_MB}MB), Vídeos (até ${MAX_VIDEO_SIZE_MB}MB) ou Documentos PDF (até ${MAX_PDF_SIZE_MB}MB).`);
+      return;
+    }
+
     setIsUploading(true);
     try {
-      const reader = new FileReader();
-      reader.onloadend = async () => {
-        const dataUrl = reader.result as string;
-        const type: MessageType = file.type.startsWith("video")
-          ? "video"
-          : file.type.startsWith("audio")
-            ? "audio"
-            : "image";
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("friendId", activeChat.id);
 
-        const res = await sendMessageAction(activeChat.id, "Mídia", type, dataUrl);
-        if (res.success) {
-          fetchMessages(activeChat.id);
-          loadConnectionsData();
-        }
-        setIsUploading(false);
-      };
-      reader.readAsDataURL(file);
+      const response = await fetch("/api/media/upload", {
+        method: "POST",
+        body: formData,
+      });
+
+      const data = await response.json();
+      if (response.ok && data.success) {
+        fetchMessages(activeChat.id);
+        loadConnectionsData();
+      } else {
+        setFileError(data.message || "Não foi possível enviar o arquivo no momento. Por favor, tente novamente.");
+      }
     } catch (err) {
       console.error("[ConnectionsViewModel] Error uploading media:", err);
+      setFileError("Ocorreu uma falha ao carregar o arquivo. Verifique sua conexão e tente novamente.");
+    } finally {
       setIsUploading(false);
     }
   };
@@ -250,6 +288,8 @@ export function useConnectionsViewModel(options: ConnectionsViewModelOptions = {
     isLoadingList,
     isLoadingMessages,
     isUploading,
+    fileError,
+    setFileError,
     actionLoading,
     totalUnreadDMs,
     friendsCount: friendsTabItems.length,

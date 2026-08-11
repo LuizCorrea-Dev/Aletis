@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Mail,
   Lock,
@@ -9,6 +9,7 @@ import {
   Loader2,
   AlertCircle,
   Smile,
+  Feather,
 } from "lucide-react";
 import { loginAction, signUpAction } from "@/app/actions/user-actions";
 
@@ -20,6 +21,16 @@ export const AuthForm = () => {
   const [username, setUsername] = useState("");
   const [fullName, setFullName] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [sentinelaFarewell, setSentinelaFarewell] = useState(false);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get("sentinelaFarewell") === "true") {
+        setSentinelaFarewell(true);
+      }
+    }
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -67,6 +78,46 @@ export const AuthForm = () => {
         boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.4)",
       }}
     >
+      {sentinelaFarewell && (
+        <div
+          style={{
+            backgroundColor: "rgba(80, 200, 120, 0.1)",
+            border: "1px solid rgba(80, 200, 120, 0.3)",
+            borderRadius: "16px",
+            padding: "16px",
+            marginBottom: "24px",
+            textAlign: "center",
+          }}
+        >
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: "8px",
+              color: "#50c878",
+              fontWeight: "bold",
+              fontSize: "14px",
+              marginBottom: "8px",
+            }}
+          >
+            <Feather size={18} />
+            <span>Mensagem do Sentinela 🌿</span>
+          </div>
+          <p
+            style={{
+              color: "var(--theme-foreground)",
+              fontSize: "13px",
+              fontStyle: "italic",
+              lineHeight: "1.5",
+              margin: 0,
+            }}
+          >
+            "Foi um prazer tê-lo conosco nesta jornada! Esperamos que volte em breve, agora com novas expectativas e histórias."
+          </p>
+        </div>
+      )}
+
       <h2
         style={{
           color: "var(--theme-foreground)",

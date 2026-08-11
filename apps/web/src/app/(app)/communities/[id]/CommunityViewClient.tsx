@@ -26,7 +26,19 @@ import {
   MoreVertical,
   Ban,
   User,
+  Video,
+  Mic,
+  MicOff,
+  PanelLeftClose,
+  PanelLeftOpen,
+  ChevronLeft,
+  UserPlus,
+  UserCheck,
 } from "lucide-react";
+import {
+  requestFriendshipAction,
+  toggleFollowAction,
+} from "@/app/actions/connection-actions";
 import {
   joinCommunityAction,
   leaveCommunityAction,
@@ -48,6 +60,7 @@ import CommunitySettings from "./CommunitySettings";
 import CreateChannelModal from "./CreateChannelModal";
 import EditChannelModal from "./EditChannelModal";
 import MemberProfileModal from "./MemberProfileModal";
+import { UserIdentity } from "@/components/molecules/UserIdentity";
 
 
 interface CommunityViewClientProps {
@@ -70,7 +83,20 @@ export default function CommunityViewClient({
   const [channels, setChannels] = useState<Channel[]>(initialChannels);
   const [activeChannel, setActiveChannel] = useState<Channel | null>(initialChannels[0] || null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isCommunitySidebarCollapsed, setIsCommunitySidebarCollapsed] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+
+  const getAvatarUrl = (participant: any) => {
+    if (!participant) return "https://api.dicebear.com/7.x/avataaars/svg?seed=User";
+    try {
+      if (participant.metadata) {
+        const parsed = JSON.parse(participant.metadata);
+        if (parsed.avatarUrl) return parsed.avatarUrl;
+      }
+    } catch {}
+    const seed = participant.name || participant.identity || "User";
+    return `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(seed)}`;
+  };
   const [isJoining, setIsJoining] = useState(false);
   const [sidebarTab, setSidebarTab] = useState<"channels" | "members">("channels");
   const [members, setMembers] = useState<CommunityMember[]>([]);
@@ -81,6 +107,7 @@ export default function CommunityViewClient({
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; member: CommunityMember } | null>(null);
 
   const [editingChannel, setEditingChannel] = useState<Channel | null>(null);
+  const [voiceParticipants, setVoiceParticipants] = useState<any[]>([]);
 
   useEffect(() => {
     const handleClickOutside = () => setContextMenu(null);
@@ -287,20 +314,31 @@ export default function CommunityViewClient({
       {/* Sidebar de Canais/Membros */}
       <aside
         className={`
-          fixed top-18.25 bottom-0 left-0 z-60 w-64 bg-slate-900/90 border-r border-slate-700/80 flex flex-col
-          md:relative md:top-auto md:bottom-auto md:inset-auto md:h-full md:w-64 md:translate-x-0 md:bg-slate-800/30 md:backdrop-blur-sm
-          transition-transform duration-300
-          ${isSidebarOpen ? "translate-x-0" : "-translate-x-full"}
+          fixed top-18.25 bottom-0 left-0 z-60 w-64 bg-slate-900/95 border-r border-slate-700/80 flex flex-col shrink-0
+          md:relative md:top-0 md:bottom-auto md:inset-auto md:h-full md:bg-slate-800/30 md:backdrop-blur-sm
+          transition-all duration-300 overflow-hidden
+          ${isCommunitySidebarCollapsed ? "md:w-0 md:opacity-0 md:border-r-0 md:pointer-events-none" : "md:w-64 md:opacity-100"}
+          ${isSidebarOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"}
         `}
       >
         {/* Topo da Sidebar */}
-        <div className="p-4 border-b border-slate-700/80 flex flex-col gap-3">
-          <div className="flex items-center justify-between">
+        <div className="p-4 border-b border-slate-700/80 flex flex-col gap-3 shrink-0">
+          <div className="flex items-center justify-between gap-2">
             <h2 className="font-bold text-white truncate text-base font-display flex-1">
               {community.name}
             </h2>
-            <button onClick={() => setIsSidebarOpen(false)} className="md:hidden text-slate-400 hover:text-white">
-              <X size={20} />
+            
+            {/* Botão de Ocultar Menu da Comunidade */}
+            <button
+              type="button"
+              onClick={() => {
+                setIsSidebarOpen(false);
+                setIsCommunitySidebarCollapsed(true);
+              }}
+              className="p-1.5 rounded-xl text-slate-400 hover:text-white hover:bg-slate-700/60 transition-colors cursor-pointer"
+              title="Ocultar Menu do Grupo"
+            >
+              <PanelLeftClose size={18} />
             </button>
           </div>
 
@@ -446,51 +484,101 @@ export default function CommunityViewClient({
                   <div className="space-y-1">
                     {channels
                       .filter((c) => c.type === "VOICE")
-                      .map((channel) => (
-                        <div
-                          key={channel.id}
-                          onClick={() => {
-                            setActiveChannel(channel);
-                            setIsSidebarOpen(false);
-                          }}
-                          className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-sm font-medium transition-colors group cursor-pointer ${activeChannel?.id === channel.id
-                              ? "bg-mint-500/10 text-mint-450 font-bold"
-                              : "text-slate-400 hover:bg-slate-800/40 hover:text-slate-200"
-                            }`}
-                        >
-                          <Volume2 size={16} className="shrink-0" />
-                          <span className="truncate text-left flex-1">{channel.name}</span>
-                          {channel.isPrivate && (
-                            <Lock size={12} className="text-slate-500 shrink-0" />
-                          )}
-                          {hasModerationPower && (
-                            <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
-                              <button
-                                type="button"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setEditingChannel(channel);
-                                }}
-                                className="text-slate-500 hover:text-mint-400 p-1 rounded transition-colors"
-                                title="Editar canal"
-                              >
-                                <Pencil size={13} />
-                              </button>
-                              {channels.length > 1 && (
-                                <button
-                                  type="button"
-                                  onClick={(e) => handleDeleteChannel(e, channel.id)}
-                                  className="text-slate-500 hover:text-red-400 p-1 rounded transition-colors"
-                                  title="Excluir canal"
-                                >
-                                  <Trash2 size={13} />
-                                </button>
+                      .map((channel) => {
+                        const isActive = activeChannel?.id === channel.id;
+
+                        return (
+                          <div key={channel.id} className="space-y-0.5">
+                            <div
+                              onClick={() => {
+                                if (activeChannel?.id !== channel.id) {
+                                  setVoiceParticipants([]);
+                                }
+                                setActiveChannel(channel);
+                                setIsSidebarOpen(false);
+                              }}
+                              className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-sm font-medium transition-colors group cursor-pointer ${
+                                isActive
+                                  ? "bg-mint-500/10 text-mint-450 font-bold"
+                                  : "text-slate-400 hover:bg-slate-800/40 hover:text-slate-200"
+                              }`}
+                            >
+                              <Volume2
+                                size={16}
+                                className={`shrink-0 ${
+                                  isActive ? "text-mint-400 animate-pulse" : ""
+                                }`}
+                              />
+                              <span className="truncate text-left flex-1">
+                                {channel.name}
+                              </span>
+                              {channel.isPrivate && (
+                                <Lock size={12} className="text-slate-500 shrink-0" />
+                              )}
+                              {hasModerationPower && (
+                                <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                                  <button
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setEditingChannel(channel);
+                                    }}
+                                    className="text-slate-500 hover:text-mint-400 p-1 rounded transition-colors"
+                                    title="Editar canal"
+                                  >
+                                    <Pencil size={13} />
+                                  </button>
+                                  {channels.length > 1 && (
+                                    <button
+                                      type="button"
+                                      onClick={(e) => handleDeleteChannel(e, channel.id)}
+                                      className="text-slate-500 hover:text-red-400 p-1 rounded transition-colors"
+                                      title="Excluir canal"
+                                    >
+                                      <Trash2 size={13} />
+                                    </button>
+                                  )}
+                                </div>
                               )}
                             </div>
-                          )}
-                        </div>
-                      ))}
 
+                            {/* SUB-LISTA ESTILO DISCORD: Membros conectados na chamada de voz */}
+                            {isActive && voiceParticipants.length > 0 && (
+                              <div className="pl-4 pr-1 py-1 space-y-1 border-l-2 border-mint-500/30 ml-4 animate-in fade-in slide-in-from-top-1 duration-150">
+                                {voiceParticipants.map((p) => {
+                                  const name = p.name || p.identity || "Membro";
+                                  const isSpeaking = p.isSpeaking;
+                                  const isMicOn = p.isMicrophoneEnabled;
+                                  const isCamOn = p.isCameraEnabled;
+
+                                  return (
+                                    <div
+                                      key={p.sid}
+                                      className="flex items-center justify-between px-2 py-1 rounded-lg hover:bg-slate-800/60 text-xs text-slate-300 transition-colors group/user cursor-default"
+                                    >
+                                      <UserIdentity
+                                        user={{
+                                          id: p.identity,
+                                          name,
+                                          avatarUrl: getAvatarUrl(p),
+                                          isSpeaking,
+                                          isMicOn,
+                                          isCamOn,
+                                          isLocal: p.isLocal,
+                                          metadata: p.metadata,
+                                        }}
+                                        size="xs"
+                                        showStatusIcons={true}
+                                        className="flex-1"
+                                      />
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
                   </div>
                 </div>
               )}
@@ -517,14 +605,17 @@ export default function CommunityViewClient({
                       }}
                       className="group flex items-center justify-between p-2 rounded-xl bg-slate-800/20 border border-slate-850 hover:bg-slate-800/60 transition-all cursor-pointer relative select-none"
                     >
-                      <div className="flex items-center gap-2 min-w-0 flex-1">
-                        <img
-                          src={member.avatar || "https://api.dicebear.com/7.x/avataaars/svg"}
-                          className="w-6 h-6 rounded-lg object-cover"
-                          alt=""
-                        />
-                        <span className="text-xs font-bold text-slate-200 truncate">{member.name}</span>
-                      </div>
+                      <UserIdentity
+                        user={{
+                          id: member.userId,
+                          name: member.name,
+                          avatarUrl: member.avatar,
+                          role: member.role,
+                        }}
+                        size="xs"
+                        showBadges={true}
+                        className="flex-1 min-w-0"
+                      />
 
                       {/* Badges e Ações de Moderação */}
                       <div className="flex items-center gap-1.5">
@@ -587,20 +678,18 @@ export default function CommunityViewClient({
         </div>
 
         {/* Rodapé da Sidebar (Fiel ao web-legacy) */}
-        <div className="p-3 bg-slate-900/50 border-t border-slate-700/50 flex items-center gap-3">
-          <img
-            src={
-              currentUserProfile?.avatarUrl || `https://api.dicebear.com/7.x/bottts/svg?seed=${currentUserProfile?.username || "user"}`
-            }
-            className="w-9 h-9 rounded-full border border-slate-600 object-cover"
-            alt={currentUserProfile?.username || "Me"}
+        <div className="p-3 bg-slate-900/50 border-t border-slate-700/50 flex items-center justify-between gap-3">
+          <UserIdentity
+            user={{
+              id: currentUserProfile?.id,
+              name: currentUserProfile?.username || "Você",
+              avatarUrl: currentUserProfile?.avatarUrl,
+              status: "online",
+              subtitle: "Online",
+            }}
+            size="sm"
+            className="flex-1 min-w-0"
           />
-          <div className="flex-1 min-w-0">
-            <div className="text-sm font-bold text-white truncate">
-              {currentUserProfile?.username || "Você"}
-            </div>
-            <div className="text-xs text-slate-500 truncate">Online</div>
-          </div>
 
           {community.isMuted && (
             <div className="text-slate-500" title="Silenciado">
@@ -630,16 +719,34 @@ export default function CommunityViewClient({
         ) : (
           <div className="flex-1 flex flex-col h-full overflow-hidden">
             {/* Header do Canal */}
-            <div className="px-6 py-4 bg-slate-900/30 border-b border-slate-850 shrink-0 flex items-center justify-between z-15">
-              <div className="flex items-center gap-2">
-                {activeChannel.type === "FEED" ? (
-                  <MessageSquare className="text-mint-500" size={18} />
-                ) : activeChannel.type === "VOICE" ? (
-                  <Volume2 className="text-mint-500" size={18} />
-                ) : (
-                  <Hash className="text-mint-500" size={18} />
+            <div className="px-4 md:px-6 py-3.5 bg-slate-900/40 border-b border-slate-800 shrink-0 flex items-center justify-between z-15 backdrop-blur-md">
+              <div className="flex items-center gap-3">
+                {/* Botão de Expandir o Menu da Comunidade quando colapsado ou no mobile */}
+                {(isCommunitySidebarCollapsed || !isSidebarOpen) && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsCommunitySidebarCollapsed(false);
+                      setIsSidebarOpen(true);
+                    }}
+                    className="flex items-center gap-2 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-mint-400 rounded-xl font-bold text-xs border border-slate-700/80 transition-all cursor-pointer shadow-md hover:scale-105 active:scale-95"
+                    title="Mostrar Menu da Comunidade"
+                  >
+                    <PanelLeftOpen size={16} />
+                    <span className="hidden sm:inline">Menu da Comunidade</span>
+                  </button>
                 )}
-                <h1 className="font-bold text-white text-base leading-tight font-display">{activeChannel.name}</h1>
+
+                <div className="flex items-center gap-2">
+                  {activeChannel.type === "FEED" ? (
+                    <MessageSquare className="text-mint-500" size={18} />
+                  ) : activeChannel.type === "VOICE" ? (
+                    <Volume2 className="text-mint-500" size={18} />
+                  ) : (
+                    <Hash className="text-mint-500" size={18} />
+                  )}
+                  <h1 className="font-bold text-white text-base leading-tight font-display">{activeChannel.name}</h1>
+                </div>
               </div>
             </div>
 
@@ -681,7 +788,11 @@ export default function CommunityViewClient({
                 />
               )}
               {activeChannel.type === "VOICE" && (
-                <CommunityVoice channel={activeChannel} />
+                <CommunityVoice
+                  channel={activeChannel}
+                  currentUserProfile={currentUserProfile}
+                  onParticipantsChange={setVoiceParticipants}
+                />
               )}
             </div>
           </div>
@@ -754,10 +865,40 @@ export default function CommunityViewClient({
                 setSelectedMemberForModal(contextMenu.member);
                 setContextMenu(null);
               }}
-              className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-medium text-slate-200 hover:bg-mint-500/10 hover:text-mint-400 rounded-xl transition-colors text-left cursor-pointer"
+              className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-medium text-slate-200 hover:bg-mint-500/10 hover:text-mint-400 rounded-xl transition-colors text-left cursor-pointer font-bold"
             >
-              <User size={14} /> Ver Perfil & Permissões
+              <User size={14} className="text-mint-400" /> Ver Perfil & Permissões
             </button>
+
+            {contextMenu.member.userId !== currentUserProfile?.id && (
+              <>
+                <button
+                  onClick={async () => {
+                    const targetId = contextMenu.member.userId;
+                    setContextMenu(null);
+                    const res = await requestFriendshipAction(targetId);
+                    alert(res.success ? "Solicitação de amizade enviada com sucesso!" : (res.message || "Não foi possível enviar a solicitação."));
+                  }}
+                  className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-medium text-slate-200 hover:bg-mint-500/10 hover:text-mint-400 rounded-xl transition-colors text-left cursor-pointer"
+                >
+                  <UserPlus size={14} className="text-mint-400" /> Adicionar Amigo
+                </button>
+
+                <button
+                  onClick={async () => {
+                    const targetId = contextMenu.member.userId;
+                    setContextMenu(null);
+                    const res = await toggleFollowAction(targetId);
+                    if (res.success) {
+                      alert(res.isFollowing ? `Você agora está seguindo ${contextMenu.member.name}!` : `Você deixou de seguir ${contextMenu.member.name}.`);
+                    }
+                  }}
+                  className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-medium text-slate-200 hover:bg-indigo-500/10 hover:text-indigo-300 rounded-xl transition-colors text-left cursor-pointer"
+                >
+                  <UserCheck size={14} className="text-indigo-400" /> Seguir / Deixar de Seguir
+                </button>
+              </>
+            )}
 
             {hasModerationPower &&
               contextMenu.member.role !== "OWNER" &&

@@ -61,12 +61,17 @@ export class PostgresUserRepository implements IUserRepository {
   async getUserProfile(userId: string): Promise<UserProfile | null> {
     try {
       const { rows } = await this.pool.query(
-        "SELECT * FROM profiles WHERE id = $1 LIMIT 1",
+        `SELECT *,
+                (orvalho_expires_at IS NOT NULL AND orvalho_expires_at > CURRENT_TIMESTAMP) as is_orvalho_active
+         FROM profiles WHERE id = $1 LIMIT 1`,
         [userId]
       );
 
       if (rows.length === 0) return null;
       const data = rows[0];
+
+      const activeOrvalho = data.is_orvalho_active ? (data.orvalho_balance ?? 0) : 0;
+      const permanentVibes = data.vibes_balance ?? 50;
 
       return {
         id: data.id,
@@ -76,10 +81,10 @@ export class PostgresUserRepository implements IUserRepository {
         status: data.status || "Em busca de equilíbrio.",
         avatarUrl: data.avatar_url || `https://api.dicebear.com/7.x/initials/svg?seed=${data.username}`,
         bannerUrl: data.banner_url || "",
-        vibes: data.vibes_balance ?? data.vibes ?? 50,
-        vibeSaldoReal: data.vibes_balance ?? 50,
-        vibeOrvalho: 0,
-        ultimaDataOrvalho: null,
+        vibes: permanentVibes + activeOrvalho,
+        vibeSaldoReal: permanentVibes,
+        vibeOrvalho: activeOrvalho,
+        ultimaDataOrvalho: data.ultima_data_orvalho ? new Date(data.ultima_data_orvalho).toISOString() : null,
         autoridadeScore: 100,
         tier: data.tipo_perfil || "comum",
         tipoPerfil: data.tipo_perfil || "comum",
@@ -98,23 +103,47 @@ export class PostgresUserRepository implements IUserRepository {
 
   async getProfileByUsername(username: string): Promise<UserProfile | null> {
     try {
-      const { rows } = await this.pool.query(
-        "SELECT * FROM profiles WHERE LOWER(username) = LOWER($1) LIMIT 1",
-        [username.trim()]
-      );
+      const query = `
+        SELECT 
+          u.id,
+          COALESCE(p.username, SPLIT_PART(u.email, '@', 1)) as username,
+          COALESCE(p.display_name, p.full_name, p.username, SPLIT_PART(u.email, '@', 1)) as display_name,
+          p.bio,
+          p.status,
+          p.avatar_url,
+          p.banner_url,
+          p.vibes_balance,
+          p.tipo_perfil,
+          p.phone,
+          p.country_code,
+          p.is_anonymous_default,
+          p.is_suspended,
+          p.username_last_changed
+        FROM users u
+        LEFT JOIN profiles p ON p.id = u.id
+        WHERE LOWER(p.username) = LOWER($1)
+           OR LOWER(p.display_name) = LOWER($1)
+           OR LOWER(p.full_name) = LOWER($1)
+           OR LOWER(SPLIT_PART(u.email, '@', 1)) = LOWER($1)
+           OR u.id::text = $1
+        LIMIT 1
+      `;
 
+      const { rows } = await this.pool.query(query, [username.trim()]);
       if (rows.length === 0) return null;
       const data = rows[0];
 
+      const cleanUsername = data.username || username.trim();
+
       return {
         id: data.id,
-        name: data.display_name || data.full_name || "Membro Aletis",
-        username: data.username,
+        name: data.display_name || cleanUsername || "Membro Aletis",
+        username: cleanUsername,
         bio: data.bio || "",
         status: data.status || "Em busca de equilíbrio.",
-        avatarUrl: data.avatar_url || `https://api.dicebear.com/7.x/initials/svg?seed=${data.username}`,
+        avatarUrl: data.avatar_url || `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(cleanUsername)}`,
         bannerUrl: data.banner_url || "",
-        vibes: data.vibes_balance ?? data.vibes ?? 50,
+        vibes: data.vibes_balance ?? 50,
         vibeSaldoReal: data.vibes_balance ?? 50,
         vibeOrvalho: 0,
         ultimaDataOrvalho: null,

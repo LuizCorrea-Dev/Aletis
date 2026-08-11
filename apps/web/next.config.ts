@@ -7,7 +7,7 @@ const securityHeaders = [
   { key: "Strict-Transport-Security", value: "max-age=31536000; includeSubDomains" },
   { key: "X-Content-Type-Options", value: "nosniff" },
   { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
-  { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=()" },
+  { key: "Permissions-Policy", value: "camera=(self), microphone=(self), geolocation=()" },
   {
     key: "Content-Security-Policy",
     value: [
@@ -15,8 +15,9 @@ const securityHeaders = [
       "script-src 'self' 'unsafe-eval' 'unsafe-inline'",
       "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
       "img-src 'self' data: blob: https://images.unsplash.com https://api.dicebear.com https://picsum.photos",
+      "media-src 'self' data: blob:",
       "font-src 'self' https://fonts.gstatic.com",
-      "connect-src 'self' http://localhost:11434",
+      "connect-src 'self' http: https: ws: wss:",
       "frame-ancestors 'none'",
     ].join("; "),
   },
@@ -26,9 +27,10 @@ const nextConfig: NextConfig = {
   output: "standalone",
   experimental: {
     serverActions: {
-      bodySizeLimit: "10mb",
+      bodySizeLimit: "250mb",
     },
-  },
+    middlewareClientMaxBodySize: "250mb",
+  } as any,
 
 
   turbopack: {

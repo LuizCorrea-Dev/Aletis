@@ -111,7 +111,7 @@ export const VibeZapButton: React.FC<VibeZapButtonProps> = ({
 
       {/* Tooltip de Erro / Informação */}
       {errorMessage && (
-        <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-1.5 bg-red-900/90 text-red-200 border border-red-700 text-[10px] font-bold rounded-xl shadow-xl whitespace-nowrap z-50 animate-in fade-in zoom-in-95 duration-150">
+        <div className="absolute bottom-full left-0 mb-2 px-3.5 py-2 bg-red-950/95 text-red-200 border border-red-500/80 text-xs font-bold rounded-2xl shadow-2xl z-[100] min-w-max max-w-xs sm:max-w-md whitespace-normal text-left animate-in fade-in zoom-in-95 duration-150 backdrop-blur-md">
           {errorMessage}
         </div>
       )}

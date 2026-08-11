@@ -7,7 +7,8 @@ import { getUserVibesAndNotificationsAction } from "@/app/actions/user-actions";
 import { getDetailedNotificationsAction, markNotificationsAsReadAction, NotificationItem } from "@/app/actions/connection-actions";
 
 export function Header() {
-  const [vibes, setVibes] = useState(50);
+  const [permanentVibes, setPermanentVibes] = useState(50);
+  const [orvalhoVibes, setOrvalhoVibes] = useState(0);
   const [notificationsCount, setNotificationsCount] = useState(0);
   const [isOpen, setIsOpen] = useState(false);
   const [items, setItems] = useState<NotificationItem[]>([]);
@@ -16,7 +17,8 @@ export function Header() {
 
   const fetchStatus = async () => {
     const res = await getUserVibesAndNotificationsAction();
-    setVibes(res.vibes);
+    setPermanentVibes(res.permanentVibes ?? res.vibes);
+    setOrvalhoVibes(res.orvalhoVibes ?? 0);
     setNotificationsCount(res.notifications);
   };
 
@@ -60,13 +62,27 @@ export function Header() {
         </span>
       </Link>
 
-      <div className="flex items-center gap-3">
-        <div className="flex items-center gap-2 bg-slate-800/80 px-4 py-2 rounded-2xl border border-slate-700/80 shadow-inner hover:border-[#FFC300]/50 transition-all select-none">
+      <div className="flex items-center gap-2 md:gap-3">
+        {/* Saldo Permanente de VIBES */}
+        <div className="flex items-center gap-2 bg-slate-800/80 px-3.5 py-2 rounded-2xl border border-slate-700/80 shadow-inner hover:border-[#FFC300]/50 transition-all select-none">
           <Zap className="text-[#FFC300] scale-110" size={16} fill="#FFC300" />
           <span className="font-extrabold text-[#FFC300] tracking-wider text-xs">
-            {vibes} VIBES
+            {permanentVibes} VIBES
           </span>
         </div>
+
+        {/* Bolinha de Saldo Ativo de Orvalho do Dia (+6) */}
+        {orvalhoVibes > 0 && (
+          <div
+            className="flex items-center gap-1.5 bg-cyan-950/80 border border-cyan-500/60 px-3 py-1.5 rounded-2xl shadow-[0_0_15px_rgba(6,182,212,0.3)] select-none transition-all cursor-help animate-pulse"
+            title="Orvalho do Dia: +6 Vibes temporárias ativas por 24h para usar ou doar"
+          >
+            <span className="text-sm">💧</span>
+            <span className="font-black text-cyan-300 tracking-wide text-xs">
+              +{orvalhoVibes}
+            </span>
+          </div>
+        )}
 
         {/* Notificações (Sino + Dropdown) */}
         <div className="relative" ref={dropdownRef}>

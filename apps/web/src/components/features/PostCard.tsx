@@ -3,7 +3,7 @@
 import { useState } from "react";
 import {
   MessageCircle, Share2, Pin, AlertCircle,
-  AlertTriangle, Trash2, Loader2, Edit2,
+  AlertTriangle, Trash2, Loader2, Edit2, FileText, Download, Film, Image as ImageIcon
 } from "lucide-react";
 import { VibeZapButton, CommentSection } from "@/components/molecules";
 import { cn } from "@/lib/utils";
@@ -53,6 +53,77 @@ export const PostCard = ({
 
   const avatar = authorAvatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${authorName}`;
 
+  const renderMediaContent = (mediaUrlStr: string) => {
+    let urls: string[] = [];
+    try {
+      if (mediaUrlStr.trim().startsWith("[")) {
+        const parsed = JSON.parse(mediaUrlStr);
+        urls = Array.isArray(parsed) ? parsed : [mediaUrlStr];
+      } else {
+        urls = [mediaUrlStr];
+      }
+    } catch {
+      urls = [mediaUrlStr];
+    }
+
+    return (
+      <div className={`w-full grid gap-2 p-2 bg-slate-900/40 rounded-2xl ${urls.length > 1 ? "grid-cols-2" : "grid-cols-1"}`}>
+        {urls.map((url, idx) => {
+          const isVideo = url.startsWith("data:video/") || url.endsWith(".mp4") || url.endsWith(".webm");
+          const isPdf = url.startsWith("data:application/pdf") || url.endsWith(".pdf");
+
+          if (isVideo) {
+            return (
+              <video
+                key={idx}
+                src={url}
+                controls
+                muted
+                playsInline
+                preload="metadata"
+                className="w-full max-h-105 rounded-xl bg-black object-cover"
+              />
+            );
+          }
+
+          if (isPdf) {
+            return (
+              <div key={idx} className="p-4 bg-slate-800 border border-slate-700 rounded-xl flex items-center justify-between gap-3">
+                <div className="flex items-center gap-3">
+                  <div className="p-2.5 bg-amber-500/20 text-amber-400 rounded-xl">
+                    <FileText size={22} />
+                  </div>
+                  <div>
+                    <p className="text-xs font-bold text-white">Documento Anexo (PDF)</p>
+                    <p className="text-[10px] text-slate-400">Clique para baixar / visualizar</p>
+                  </div>
+                </div>
+                <a
+                  href={url}
+                  download="documento_aletis.pdf"
+                  onClick={(e) => e.stopPropagation()}
+                  className="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-white rounded-lg text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer"
+                >
+                  <Download size={14} /> Baixar
+                </a>
+              </div>
+            );
+          }
+
+          return (
+            <img
+              key={idx}
+              src={url}
+              alt="Mídia"
+              className="w-full h-auto max-h-105 object-cover rounded-xl block"
+              loading="lazy"
+            />
+          );
+        })}
+      </div>
+    );
+  };
+
   const handleDelete = async () => {
     setIsDeleting(true);
     try {
@@ -72,7 +143,7 @@ export const PostCard = ({
       const formData = new FormData();
       formData.append("content", editContent.trim());
       if (editMediaUrl.trim()) formData.append("mediaUrl", editMediaUrl.trim());
-      
+
       const { updatePostAction } = await import("@/app/actions/post-actions");
       const res = await updatePostAction(id, formData);
       if (res.success) {
@@ -110,12 +181,7 @@ export const PostCard = ({
           {/* Mídia */}
           {mediaUrl && (
             <div className="w-full bg-black/20 overflow-hidden relative">
-              <img
-                src={mediaUrl}
-                alt="Vibe media"
-                className="w-full h-auto max-h-105 object-cover block"
-                loading="lazy"
-              />
+              {renderMediaContent(mediaUrl)}
               <div className="absolute top-2 right-2 flex gap-2 z-20">
                 {canEdit && (
                   <button

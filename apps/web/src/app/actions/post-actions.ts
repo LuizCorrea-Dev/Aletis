@@ -96,6 +96,19 @@ export async function getPostsAction(filterTag?: string, communityId?: string, p
   }
 }
 
+export async function getUserPostsAction(targetUserId?: string) {
+  try {
+    const user = await getCurrentUser();
+    const userId = targetUserId || user?.id;
+    if (!userId) return [];
+    const repository = new PostgresPostRepository();
+    return await repository.getUserPosts(userId);
+  } catch (error) {
+    console.error("Error in getUserPostsAction:", error);
+    return [];
+  }
+}
+
 export async function getVectorRecommendedPostsAction(queryText?: string) {
   try {
     const user = await getCurrentUser();

@@ -1,5 +1,5 @@
 export * from "./SideNavigation";
 export * from "./Header";
-export * from "../features/CreatePostModal";
-export * from "../features/EditPostModal";
+export { CreatePostModal } from "../features/CreatePostModal";
+export { EditPostModal } from "../features/EditPostModal";
 export * from "../features/ProfileSettingsModal";

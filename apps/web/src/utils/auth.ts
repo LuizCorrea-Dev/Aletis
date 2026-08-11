@@ -46,9 +46,36 @@ export function verifyToken(token: string): LocalUserSession | null {
       email: payload.email,
       username: payload.username,
       role: payload.role,
+      avatarUrl: payload.avatarUrl,
     };
   } catch {
     return null;
+  }
+}
+
+export async function ensureUserExistsInDb(session: LocalUserSession): Promise<void> {
+  if (!session || !session.id) return;
+  try {
+    const pool = getDbPool();
+    const { rows } = await pool.query("SELECT id FROM users WHERE id = $1 LIMIT 1", [session.id]);
+    if (rows.length === 0) {
+      const email = session.email || `${session.username || "user"}@aletis.app`;
+      const username = session.username || email.split("@")[0];
+      const avatarUrl = session.avatarUrl || `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(username)}`;
+
+      await pool.query(
+        "INSERT INTO users (id, email, password_hash, role) VALUES ($1, $2, $3, $4) ON CONFLICT (id) DO NOTHING",
+        [session.id, email.toLowerCase(), "session_autocreated", session.role || "user"]
+      );
+
+      await pool.query(
+        `INSERT INTO profiles (id, username, display_name, full_name, avatar_url, vibes_balance)
+         VALUES ($1, $2, $3, $4, $5, 50) ON CONFLICT (id) DO NOTHING`,
+        [session.id, username.toLowerCase(), username, username, avatarUrl]
+      );
+    }
+  } catch (err) {
+    console.error("Erro ao auto-recuperar conta no banco de dados:", err);
   }
 }
 
@@ -57,7 +84,29 @@ export async function getCurrentUser(): Promise<LocalUserSession | null> {
     const cookieStore = await cookies();
     const token = cookieStore.get(SESSION_COOKIE_NAME)?.value;
     if (!token) return null;
-    return verifyToken(token);
+    const session = verifyToken(token);
+    if (session) {
+      await ensureUserExistsInDb(session);
+
+      try {
+        const pool = getDbPool();
+        const { rows } = await pool.query(
+          "SELECT avatar_url, username, display_name FROM profiles WHERE id = $1 LIMIT 1",
+          [session.id]
+        );
+        if (rows.length > 0) {
+          if (rows[0].avatar_url) {
+            session.avatarUrl = rows[0].avatar_url;
+          }
+          if (rows[0].username) {
+            session.username = rows[0].username;
+          }
+        }
+      } catch (dbErr) {
+        console.error("Erro ao buscar foto atualizada do perfil:", dbErr);
+      }
+    }
+    return session;
   } catch {
     return null;
   }

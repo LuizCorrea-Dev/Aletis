@@ -3,14 +3,15 @@
 import React from "react";
 import Image from "next/image";
 
-interface AvatarProps {
+export interface AvatarProps {
   src?: string | null;
   alt?: string;
-  size?: "sm" | "md" | "lg" | "xl";
+  size?: "xs" | "sm" | "md" | "lg" | "xl";
   className?: string;
 }
 
 const sizeClasses = {
+  xs: "w-6 h-6 text-[10px]",
   sm: "w-8 h-8 text-xs",
   md: "w-10 h-10 text-sm",
   lg: "w-14 h-14 text-base",
@@ -19,32 +20,33 @@ const sizeClasses = {
 
 export const Avatar: React.FC<AvatarProps> = ({
   src,
-  alt = "Avatar",
+  alt = "User",
   size = "md",
   className = "",
 }) => {
   const [hasError, setHasError] = React.useState(false);
-  const initials = alt ? alt.charAt(0).toUpperCase() : "?";
 
-  const isSvg = src ? src.includes("svg") || src.includes("dicebear") : false;
+  // Fallback image using Dicebear bottts SVG based on alt/username
+  const fallbackUrl = `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(
+    alt || "User"
+  )}`;
+
+  const finalSrc = src && src.trim() !== "" && !hasError ? src : fallbackUrl;
+  const isSvg = finalSrc.includes("svg") || finalSrc.includes("dicebear");
 
   return (
     <div
-      className={`relative rounded-full overflow-hidden flex items-center justify-center bg-slate-700 text-slate-200 font-bold border border-slate-600/50 shrink-0 ${sizeClasses[size]} ${className}`}
+      className={`relative rounded-full overflow-hidden flex items-center justify-center bg-slate-800 border border-slate-700/80 shrink-0 ${sizeClasses[size]} ${className}`}
     >
-      {src && !hasError ? (
-        <Image
-          src={src}
-          alt={alt}
-          fill
-          unoptimized={isSvg}
-          sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-          className="object-cover"
-          onError={() => setHasError(true)}
-        />
-      ) : (
-        <span>{initials}</span>
-      )}
+      <Image
+        src={finalSrc}
+        alt={alt}
+        fill
+        unoptimized={isSvg}
+        sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+        className="object-cover"
+        onError={() => setHasError(true)}
+      />
     </div>
   );
 };

@@ -27,8 +27,12 @@ import {
   FolderHeart,
   ArrowLeft,
   Loader2,
+  Check,
+  UserCheck,
+  FileText,
 } from "lucide-react";
 import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useProfile } from "@/view-models/useProfile";
 import { Avatar } from "@/components/atoms/Avatar";
 import { PostCard } from "@/components/features/PostCard";
@@ -50,13 +54,17 @@ import { deletePostAction } from "@/app/actions/post-actions";
 import { deleteAtrioItemAction } from "@/app/actions/atrio-actions";
 import { logoutAction } from "@/app/actions/user-actions";
 
-export default function ProfilePage() {
+function ProfileContent() {
   const {
     user,
     posts,
     atrioItems,
     atrioLists,
     userCommunities,
+    followers,
+    following,
+    friends,
+    pendingRequests,
     allPostsCount,
     isLoading,
     activeTab,
@@ -69,9 +77,24 @@ export default function ProfilePage() {
     setIsCreateOpen,
     setEditingPost,
     setSelectedPost,
+    handleAcceptFriendship,
     reload,
   } = useProfile();
 
+  const router = useRouter();
+  const searchParams = useSearchParams();
+
+  React.useEffect(() => {
+    const tabParam = searchParams.get("tab");
+    if (tabParam && ["posts", "atrio", "groups", "followers", "following", "connections"].includes(tabParam)) {
+      setActiveTab(tabParam as any);
+    }
+  }, [searchParams, setActiveTab]);
+
+  const handleSelectTab = (tab: any) => {
+    setActiveTab(tab);
+    router.replace(`/profile?tab=${tab}`, { scroll: false });
+  };
   const [isCreateAtrioOpen, setIsCreateAtrioOpen] = useState(false);
   const [editingAtrioItem, setEditingAtrioItem] = useState<AtrioItemData | null>(null);
   const [atrioSubTab, setAtrioSubTab] = useState<"obras" | "santuario">("obras");
@@ -81,6 +104,47 @@ export default function ProfilePage() {
   const [sharingList, setSharingList] = useState<AtrioListData | null>(null);
   const [isCreateListOpen, setIsCreateListOpen] = useState(false);
   const [newListNameInput, setNewListNameInput] = useState("");
+
+  const renderProfileMedia = (url?: string | null, title: string = "Mídia") => {
+    if (!url) return null;
+
+    const isVideo =
+      url.startsWith("data:video/") ||
+      url.endsWith(".mp4") ||
+      url.endsWith(".webm") ||
+      url.includes("video");
+    const isPdf = url.startsWith("data:application/pdf") || url.endsWith(".pdf");
+
+    if (isVideo) {
+      return (
+        <video
+          src={url}
+          controls
+          muted
+          playsInline
+          preload="metadata"
+          className="w-full h-full object-cover bg-black"
+        />
+      );
+    }
+
+    if (isPdf) {
+      return (
+        <div className="w-full h-full bg-slate-900 border border-slate-800 p-4 flex flex-col items-center justify-center text-center gap-2">
+          <FileText size={32} className="text-amber-400" />
+          <span className="text-xs font-bold text-white">Documento PDF</span>
+        </div>
+      );
+    }
+
+    return (
+      <img
+        src={url}
+        alt={title}
+        className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+      />
+    );
+  };
 
   const handleOpenList = async (list: AtrioListData) => {
     setSelectedList(list);
@@ -239,15 +303,18 @@ export default function ProfilePage() {
               {user.bio}
             </p>
 
-            <div className="flex items-center justify-center md:justify-start gap-6 mt-4 text-xs font-bold text-slate-300">
-              <span className="flex items-center gap-1 cursor-pointer hover:text-white" onClick={() => setActiveTab("posts")}>
+            <div className="flex items-center justify-center md:justify-start gap-6 mt-4 text-xs font-bold text-slate-300 flex-wrap">
+              <span className="flex items-center gap-1 cursor-pointer hover:text-white" onClick={() => handleSelectTab("posts")}>
                 <strong className="text-white text-sm">{allPostsCount}</strong> Publicações
               </span>
-              <span className="flex items-center gap-1 cursor-pointer hover:text-white" onClick={() => setActiveTab("following")}>
-                <strong className="text-white text-sm">0</strong> Seguindo
+              <span className="flex items-center gap-1 cursor-pointer hover:text-white" onClick={() => handleSelectTab("followers")}>
+                <strong className="text-white text-sm">{followers.length}</strong> Seguidores
               </span>
-              <span className="flex items-center gap-1 cursor-pointer hover:text-white" onClick={() => setActiveTab("connections")}>
-                <strong className="text-white text-sm">0</strong> Conexões
+              <span className="flex items-center gap-1 cursor-pointer hover:text-white" onClick={() => handleSelectTab("following")}>
+                <strong className="text-white text-sm">{following.length}</strong> Seguindo
+              </span>
+              <span className="flex items-center gap-1 cursor-pointer hover:text-white" onClick={() => handleSelectTab("connections")}>
+                <strong className="text-white text-sm">{friends.length + pendingRequests.length}</strong> Conexões
               </span>
             </div>
           </div>
@@ -258,7 +325,7 @@ export default function ProfilePage() {
       <div className="flex border-b border-slate-700/60 mb-6 overflow-x-auto custom-scrollbar gap-2">
         <button
           type="button"
-          onClick={() => setActiveTab("posts")}
+          onClick={() => handleSelectTab("posts")}
           className={`flex items-center gap-2 px-4 py-3 border-b-2 font-bold text-xs transition-colors whitespace-nowrap cursor-pointer ${activeTab === "posts" || activeTab === "vibes"
               ? "border-[#50c878] text-[#50c878]"
               : "border-transparent text-slate-400 hover:text-white"
@@ -270,7 +337,7 @@ export default function ProfilePage() {
 
         <button
           type="button"
-          onClick={() => setActiveTab("atrio")}
+          onClick={() => handleSelectTab("atrio")}
           className={`flex items-center gap-2 px-4 py-3 border-b-2 font-bold text-xs transition-colors whitespace-nowrap cursor-pointer ${activeTab === "atrio"
               ? "border-[#50c878] text-[#50c878]"
               : "border-transparent text-slate-400 hover:text-white"
@@ -282,7 +349,7 @@ export default function ProfilePage() {
 
         <button
           type="button"
-          onClick={() => setActiveTab("groups")}
+          onClick={() => handleSelectTab("groups")}
           className={`flex items-center gap-2 px-4 py-3 border-b-2 font-bold text-xs transition-colors whitespace-nowrap cursor-pointer ${activeTab === "groups"
               ? "border-[#50c878] text-[#50c878]"
               : "border-transparent text-slate-400 hover:text-white"
@@ -294,26 +361,38 @@ export default function ProfilePage() {
 
         <button
           type="button"
-          onClick={() => setActiveTab("following")}
+          onClick={() => handleSelectTab("followers")}
+          className={`flex items-center gap-2 px-4 py-3 border-b-2 font-bold text-xs transition-colors whitespace-nowrap cursor-pointer ${activeTab === "followers"
+              ? "border-[#50c878] text-[#50c878]"
+              : "border-transparent text-slate-400 hover:text-white"
+            }`}
+        >
+          <Users size={16} />
+          <span>Seguidores ({followers.length})</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => handleSelectTab("following")}
           className={`flex items-center gap-2 px-4 py-3 border-b-2 font-bold text-xs transition-colors whitespace-nowrap cursor-pointer ${activeTab === "following"
               ? "border-[#50c878] text-[#50c878]"
               : "border-transparent text-slate-400 hover:text-white"
             }`}
         >
           <Heart size={16} />
-          <span>Rede</span>
+          <span>Seguindo ({following.length})</span>
         </button>
 
         <button
           type="button"
-          onClick={() => setActiveTab("connections")}
+          onClick={() => handleSelectTab("connections")}
           className={`flex items-center gap-2 px-4 py-3 border-b-2 font-bold text-xs transition-colors whitespace-nowrap cursor-pointer ${activeTab === "connections"
               ? "border-[#50c878] text-[#50c878]"
               : "border-transparent text-slate-400 hover:text-white"
             }`}
         >
-          <Users size={16} />
-          <span>Conexões</span>
+          <UserCheck size={16} />
+          <span>Conexões ({friends.length + pendingRequests.length})</span>
         </button>
       </div>
 
@@ -333,23 +412,21 @@ export default function ProfilePage() {
             </span>
           </div>
 
-          {posts.map((post) => (
-            <div
-              key={post.id}
-              onClick={() => setSelectedPost(post)}
-              className="aspect-square group relative overflow-hidden rounded-2xl bg-slate-800/60 border border-slate-700/60 cursor-pointer shadow-md"
-            >
-              {post.media_url ? (
-                <img
-                  src={post.media_url}
-                  alt="Post"
-                  className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-                />
-              ) : (
-                <div className="w-full h-full p-4 flex items-center justify-center text-center text-slate-400 text-xs bg-slate-900/80 leading-relaxed overflow-hidden">
-                  {post.content.length > 80 ? `${post.content.slice(0, 80)}...` : post.content}
-                </div>
-              )}
+          {posts.map((post) => {
+            const mediaUrl = post.mediaUrl || post.media_url;
+            return (
+              <div
+                key={post.id}
+                onClick={() => setSelectedPost(post)}
+                className="aspect-square group relative overflow-hidden rounded-2xl bg-slate-800/60 border border-slate-700/60 cursor-pointer shadow-md"
+              >
+                {mediaUrl ? (
+                  renderProfileMedia(mediaUrl, "Post")
+                ) : (
+                  <div className="w-full h-full p-4 flex items-center justify-center text-center text-slate-400 text-xs bg-slate-900/80 leading-relaxed overflow-hidden">
+                    {post.content && post.content.length > 80 ? `${post.content.slice(0, 80)}...` : post.content || "Sem texto"}
+                  </div>
+                )}
 
               {/* Botões Flutuantes de Ação Rápida */}
               <div className="absolute top-2 right-2 flex gap-1.5 z-20">
@@ -386,7 +463,8 @@ export default function ProfilePage() {
                 </span>
               </div>
             </div>
-          ))}
+          );
+        })}
         </div>
       )}
 
@@ -458,7 +536,7 @@ export default function ProfilePage() {
                     >
                       {item.url && (
                         <div className="h-48 overflow-hidden relative">
-                          <img src={item.url} alt={item.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                          {renderProfileMedia(item.url, item.title)}
                         </div>
                       )}
                       <div className="p-4 space-y-2">
@@ -620,7 +698,7 @@ export default function ProfilePage() {
                                 })}
                                 className="h-48 overflow-hidden relative cursor-pointer"
                               >
-                                <img src={item.url} alt={item.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                                {renderProfileMedia(item.url, item.title)}
                               </div>
                             )}
 
@@ -834,9 +912,174 @@ export default function ProfilePage() {
         </div>
       )}
 
-      {activeTab !== "posts" && activeTab !== "vibes" && activeTab !== "atrio" && activeTab !== "groups" && (
-        <div className="text-center py-16 border border-dashed border-slate-800 rounded-3xl bg-slate-900/20">
-          <p className="text-xs text-slate-500 font-medium">Nenhum item nesta aba ainda.</p>
+      {/* Conteúdo da Aba Seguidores */}
+      {activeTab === "followers" && (
+        <div className="space-y-6">
+          <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+            <h3 className="text-base font-extrabold text-white flex items-center gap-2 font-display">
+              <Users size={18} className="text-[#50c878]" /> Seus Seguidores ({followers.length})
+            </h3>
+          </div>
+
+          {followers.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {followers.map((f) => (
+                <div
+                  key={f.id}
+                  className="flex items-center justify-between bg-[#1e293b] p-4 rounded-2xl border border-slate-700/80 shadow-md hover:border-slate-600 transition-all"
+                >
+                  <Link href={`/u/${f.name}`} className="flex items-center gap-3 flex-1 min-w-0 group">
+                    <Avatar src={f.avatar} alt={f.name} size="md" />
+                    <div className="min-w-0">
+                      <h4 className="font-bold text-white text-sm truncate group-hover:text-[#50c878] transition-colors">
+                        @{f.name}
+                      </h4>
+                      <span className="text-[10px] text-slate-400 font-semibold">Te segue</span>
+                    </div>
+                  </Link>
+                  <Link
+                    href={`/u/${f.name}`}
+                    className="px-3.5 py-1.5 bg-slate-800 hover:bg-[#50c878] text-white hover:text-slate-950 font-bold text-xs rounded-xl border border-slate-700 transition-all shrink-0 ml-3"
+                  >
+                    Ver Perfil
+                  </Link>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-16 border border-dashed border-slate-800 rounded-3xl bg-slate-900/20">
+              <p className="text-xs text-slate-400 font-medium">Você ainda não tem seguidores.</p>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Conteúdo da Aba Seguindo */}
+      {activeTab === "following" && (
+        <div className="space-y-6">
+          <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+            <h3 className="text-base font-extrabold text-white flex items-center gap-2 font-display">
+              <Heart size={18} className="text-[#50c878]" /> Quem Você Segue ({following.length})
+            </h3>
+          </div>
+
+          {following.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {following.map((fw) => (
+                <div
+                  key={fw.id}
+                  className="flex items-center justify-between bg-[#1e293b] p-4 rounded-2xl border border-slate-700/80 shadow-md hover:border-slate-600 transition-all"
+                >
+                  <Link href={`/u/${fw.name}`} className="flex items-center gap-3 flex-1 min-w-0 group">
+                    <Avatar src={fw.avatar} alt={fw.name} size="md" />
+                    <div className="min-w-0">
+                      <h4 className="font-bold text-white text-sm truncate group-hover:text-[#50c878] transition-colors">
+                        @{fw.name}
+                      </h4>
+                      <span className="text-[10px] text-slate-400 font-semibold">Seguindo</span>
+                    </div>
+                  </Link>
+                  <Link
+                    href={`/u/${fw.name}`}
+                    className="px-3.5 py-1.5 bg-slate-800 hover:bg-[#50c878] text-white hover:text-slate-950 font-bold text-xs rounded-xl border border-slate-700 transition-all shrink-0 ml-3"
+                  >
+                    Ver Perfil
+                  </Link>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-16 border border-dashed border-slate-800 rounded-3xl bg-slate-900/20">
+              <p className="text-xs text-slate-400 font-medium">Você ainda não segue nenhum membro.</p>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Conteúdo da Aba Conexões (Amigos & Solicitações Pendentes) */}
+      {activeTab === "connections" && (
+        <div className="space-y-6">
+          {/* Seção 1: Solicitações de Amizade Pendentes */}
+          {pendingRequests.length > 0 && (
+            <div className="bg-amber-500/10 border border-amber-500/30 rounded-3xl p-5 space-y-3">
+              <h3 className="text-sm font-extrabold text-amber-300 flex items-center gap-2 font-display">
+                <UserPlus size={16} /> Solicitações de Amizade Pendentes ({pendingRequests.length})
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {pendingRequests.map((req) => (
+                  <div
+                    key={req.id}
+                    className="flex items-center justify-between bg-slate-900/80 p-3.5 rounded-2xl border border-amber-500/20"
+                  >
+                    <div className="flex items-center gap-3">
+                      <Avatar src={req.avatar} alt={req.name} size="md" />
+                      <div>
+                        <h4 className="font-bold text-white text-sm">@{req.name}</h4>
+                        <span className="text-[10px] text-amber-400 font-semibold">Quer conectar com você</span>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => handleAcceptFriendship(req.id)}
+                      className="px-4 py-2 bg-[#50c878] hover:bg-[#3eb566] text-[#0f172a] font-extrabold text-xs rounded-xl transition-all shadow-md flex items-center gap-1.5 cursor-pointer"
+                    >
+                      <Check size={14} strokeWidth={3} />
+                      <span>Aceitar</span>
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Seção 2: Minhas Conexões (Amigos) */}
+          <div className="space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+              <h3 className="text-base font-extrabold text-white flex items-center gap-2 font-display">
+                <Users size={18} className="text-blue-400" /> Minhas Conexões ({friends.length})
+              </h3>
+            </div>
+
+            {friends.length > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {friends.map((friend) => (
+                  <div
+                    key={friend.id}
+                    className="flex items-center justify-between bg-[#1e293b] p-4 rounded-2xl border border-slate-700/80 shadow-md"
+                  >
+                    <div className="flex items-center gap-3">
+                      <Avatar src={friend.avatar} alt={friend.name} size="md" />
+                      <div>
+                        <h4 className="font-bold text-white text-sm">@{friend.name}</h4>
+                        <span className="text-[10px] text-[#50c878] font-semibold flex items-center gap-1">
+                          <Check size={10} /> Conexão Confirmada
+                        </span>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Link
+                        href="/connections"
+                        className="p-2 bg-slate-800 hover:bg-slate-700 text-white rounded-xl border border-slate-700 transition-colors"
+                        title="Enviar Mensagem Direta"
+                      >
+                        <MessageCircle size={15} />
+                      </Link>
+                      <Link
+                        href={`/u/${friend.name}`}
+                        className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs rounded-xl border border-slate-700 transition-all"
+                      >
+                        Ver Perfil
+                      </Link>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-16 border border-dashed border-slate-800 rounded-3xl bg-slate-900/20">
+                <p className="text-xs text-slate-400 font-medium">Você ainda não possui conexões aceitas.</p>
+              </div>
+            )}
+          </div>
         </div>
       )}
 
@@ -959,5 +1202,19 @@ export default function ProfilePage() {
         />
       )}
     </div>
+  );
+}
+
+export default function ProfilePage() {
+  return (
+    <React.Suspense
+      fallback={
+        <div className="flex justify-center items-center h-64">
+          <Loader2 className="animate-spin text-[#50c878]" size={32} />
+        </div>
+      }
+    >
+      <ProfileContent />
+    </React.Suspense>
   );
 }

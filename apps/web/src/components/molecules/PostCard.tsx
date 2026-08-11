@@ -10,6 +10,8 @@ import {
   AlertTriangle,
   Loader2,
   MoreVertical,
+  FileText,
+  Download,
 } from "lucide-react";
 import { Avatar } from "../atoms/Avatar";
 import { VibeZapButton } from "./VibeZapButton";
@@ -65,6 +67,84 @@ export const PostCard: React.FC<PostCardProps> = ({
   const [showMenu, setShowMenu] = useState(false);
   const [commentsCount, setCommentsCount] = useState(totalComments);
 
+  const renderMediaContent = (mediaUrlStr: string) => {
+    let urls: string[] = [];
+    try {
+      if (mediaUrlStr.trim().startsWith("[")) {
+        const parsed = JSON.parse(mediaUrlStr);
+        urls = Array.isArray(parsed) ? parsed : [mediaUrlStr];
+      } else {
+        urls = [mediaUrlStr];
+      }
+    } catch {
+      urls = [mediaUrlStr];
+    }
+
+    return (
+      <div className={`w-full grid gap-2 p-2 bg-slate-900/40 rounded-2xl ${urls.length > 1 ? "grid-cols-2" : "grid-cols-1"}`}>
+        {urls.map((url, idx) => {
+          const isVideo =
+            url.startsWith("data:video/") ||
+            url.endsWith(".mp4") ||
+            url.endsWith(".webm") ||
+            url.includes("video/");
+          const isPdf =
+            url.startsWith("data:application/pdf") ||
+            url.endsWith(".pdf") ||
+            url.includes("application/pdf");
+
+          if (isVideo) {
+            return (
+              <video
+                key={idx}
+                src={url}
+                controls
+                muted
+                playsInline
+                preload="metadata"
+                className="w-full max-h-112.5 rounded-xl bg-black object-cover"
+              />
+            );
+          }
+
+          if (isPdf) {
+            return (
+              <div key={idx} className="p-4 bg-slate-800 border border-slate-700 rounded-xl flex items-center justify-between gap-3">
+                <div className="flex items-center gap-3">
+                  <div className="p-2.5 bg-amber-500/20 text-amber-400 rounded-xl">
+                    <FileText size={22} />
+                  </div>
+                  <div>
+                    <p className="text-xs font-bold text-white">Documento Anexo (PDF)</p>
+                    <p className="text-[10px] text-slate-400">Clique para baixar / visualizar</p>
+                  </div>
+                </div>
+                <a
+                  href={url}
+                  download="documento_aletis.pdf"
+                  onClick={(e) => e.stopPropagation()}
+                  className="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-white rounded-lg text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer"
+                >
+                  <Download size={14} /> Baixar
+                </a>
+              </div>
+            );
+          }
+
+          return (
+            <img
+              key={idx}
+              src={url}
+              alt="Mídia da Vibe"
+              className="w-full h-auto max-h-112.5 object-cover rounded-xl block"
+              loading="lazy"
+            />
+          );
+        })}
+      </div>
+    );
+  };
+
   const handleDelete = async () => {
     if (!onDelete) return;
     setIsDeleting(true);
@@ -94,15 +174,10 @@ export const PostCard: React.FC<PostCardProps> = ({
             </div>
           )}
 
-          {/* Mídia da Vibe */}
+          {/* Mídia da Vibe (Fotos, Vídeos Mutados ou PDFs) */}
           {mediaUrl && (
             <div className="w-full bg-black/20 overflow-hidden relative">
-              <img
-                src={mediaUrl}
-                alt="Vibe"
-                loading="lazy"
-                className="w-full h-auto max-h-112.5 object-cover block"
-              />
+              {renderMediaContent(mediaUrl)}
             </div>
           )}
 

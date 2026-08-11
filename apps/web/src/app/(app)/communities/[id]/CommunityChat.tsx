@@ -12,6 +12,7 @@ import {
   Pencil,
   Check,
   X,
+  FileText,
 } from "lucide-react";
 import { VibeZapButton } from "@/components/molecules";
 import {
@@ -240,9 +241,51 @@ export default function CommunityChat({
     }
   };
 
-  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const [fileError, setFileError] = useState<string | null>(null);
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+
+    setFileError(null);
+
+    const fileSizeMB = file.size / (1024 * 1024);
+    const mimeType = file.type.toLowerCase();
+    const filename = file.name;
+    const extension = filename.includes(".") ? `.${filename.split(".").pop()?.toLowerCase()}` : "";
+
+    const MAX_IMAGE_SIZE_MB = 15;
+    const MAX_VIDEO_SIZE_MB = 150;
+    const MAX_PDF_SIZE_MB = 25;
+
+    if (mimeType.startsWith("image/") || [".png", ".jpg", ".jpeg", ".webp", ".gif"].includes(extension)) {
+      if (fileSizeMB > MAX_IMAGE_SIZE_MB) {
+        setFileError(`A foto "${filename}" tem ${fileSizeMB.toFixed(1)}MB e excede o limite de ${MAX_IMAGE_SIZE_MB}MB.`);
+        if (fileInputRef.current) fileInputRef.current.value = "";
+        return;
+      }
+    } else if (mimeType.startsWith("video/") || [".mp4", ".webm", ".mov", ".mkv"].includes(extension)) {
+      if (![".mp4", ".webm"].includes(extension) && !mimeType.includes("mp4") && !mimeType.includes("webm")) {
+        setFileError(`O vídeo "${filename}" é no formato "${extension}". Envie vídeos em .mp4 ou .webm.`);
+        if (fileInputRef.current) fileInputRef.current.value = "";
+        return;
+      }
+      if (fileSizeMB > MAX_VIDEO_SIZE_MB) {
+        setFileError(`O vídeo "${filename}" tem ${fileSizeMB.toFixed(1)}MB e excede o limite de ${MAX_VIDEO_SIZE_MB}MB.`);
+        if (fileInputRef.current) fileInputRef.current.value = "";
+        return;
+      }
+    } else if (mimeType === "application/pdf" || extension === ".pdf") {
+      if (fileSizeMB > MAX_PDF_SIZE_MB) {
+        setFileError(`O PDF "${filename}" tem ${fileSizeMB.toFixed(1)}MB e excede o limite de ${MAX_PDF_SIZE_MB}MB.`);
+        if (fileInputRef.current) fileInputRef.current.value = "";
+        return;
+      }
+    } else {
+      setFileError(`Arquivo "${filename}" não suportado. Envie Fotos (15MB), Vídeos MP4/WEBM (150MB) ou PDFs (25MB).`);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+      return;
+    }
 
     setIsUploadingImage(true);
     try {
@@ -253,7 +296,7 @@ export default function CommunityChat({
       };
       reader.readAsDataURL(file);
     } catch (err: any) {
-      console.error("Erro ao carregar imagem:", err);
+      console.error("Erro ao carregar arquivo:", err);
       setIsUploadingImage(false);
     }
   };
@@ -445,11 +488,36 @@ export default function CommunityChat({
                       ) : (
                         <>
                           {message.mediaUrl && (
-                            <img
-                              src={message.mediaUrl}
-                              alt="Mídia"
-                              className="max-w-xs rounded-xl mb-2 object-cover max-h-52 border border-slate-800 shadow-md"
-                            />
+                            message.mediaUrl.startsWith("data:video/") || message.mediaUrl.endsWith(".mp4") || message.mediaUrl.endsWith(".webm") ? (
+                              <video
+                                src={message.mediaUrl}
+                                controls
+                                muted
+                                playsInline
+                                preload="metadata"
+                                className="max-w-xs rounded-xl mb-2 max-h-52 bg-black object-cover"
+                              />
+                            ) : message.mediaUrl.startsWith("data:application/pdf") || message.mediaUrl.endsWith(".pdf") ? (
+                              <div className="p-3 bg-slate-800 border border-slate-700 rounded-xl flex items-center justify-between gap-3 mb-2">
+                                <div className="flex items-center gap-2">
+                                  <FileText size={20} className="text-amber-400" />
+                                  <span className="text-xs font-bold text-white">Documento PDF</span>
+                                </div>
+                                <a
+                                  href={message.mediaUrl}
+                                  download="documento_chat.pdf"
+                                  className="px-2.5 py-1 bg-slate-700 hover:bg-slate-600 text-white rounded-lg text-[10px] font-bold cursor-pointer"
+                                >
+                                  Baixar
+                                </a>
+                              </div>
+                            ) : (
+                              <img
+                                src={message.mediaUrl}
+                                alt="Mídia"
+                                className="max-w-xs rounded-xl mb-2 object-cover max-h-52 border border-slate-800 shadow-md"
+                              />
+                            )
                           )}
                           <p className="whitespace-pre-wrap wrap-break-word">
                             {parseTextWithLinks(message.content, (url) => setLinkToOpen(url))}
@@ -495,6 +563,20 @@ export default function CommunityChat({
         )}
       </div>
 
+      {/* Alerta Visual de Erro de Arquivo */}
+      {fileError && (
+        <div className="mx-4 mb-2 p-3 bg-rose-500/10 border border-rose-500/30 rounded-xl flex items-center justify-between text-xs text-rose-300 font-medium animate-in fade-in">
+          <span>{fileError}</span>
+          <button
+            type="button"
+            onClick={() => setFileError(null)}
+            className="text-slate-400 hover:text-white p-1"
+          >
+            <X size={14} />
+          </button>
+        </div>
+      )}
+
       {isMember ? (
         <form
           onSubmit={handleSend}
@@ -512,15 +594,16 @@ export default function CommunityChat({
               <input
                 ref={fileInputRef}
                 type="file"
-                accept="image/*"
+                accept="image/*,video/mp4,video/webm,application/pdf"
                 className="hidden"
-                onChange={handleImageUpload}
+                onChange={handleFileUpload}
               />
               <button
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
                 disabled={isUploadingImage}
                 className="p-2 text-slate-400 hover:text-white rounded-xl hover:bg-slate-800 transition-colors cursor-pointer shrink-0 disabled:opacity-50"
+                title="Anexar Foto, Vídeo ou PDF"
               >
                 {isUploadingImage ? (
                   <Loader2 size={18} className="animate-spin text-mint-400" />

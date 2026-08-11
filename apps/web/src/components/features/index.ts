@@ -14,4 +14,6 @@ export { CreateAtrioModal } from "./CreateAtrioModal";
 export { EditAtrioModal } from "./EditAtrioModal";
 export { SaveToListModal } from "./SaveToListModal";
 export { ShareListModal } from "./ShareListModal";
+export { RewardCelebrationModal } from "./RewardCelebrationModal";
+export type { RewardData, RewardBreakdown } from "./RewardCelebrationModal";
 

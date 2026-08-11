@@ -18,6 +18,8 @@ import {
   CheckCheck,
   UserX,
   HeartHandshake,
+  FileText,
+  X,
 } from "lucide-react";
 import {
   useConnectionsViewModel,
@@ -354,13 +356,38 @@ function ConnectionsPageContent() {
                             : "bg-slate-800 text-slate-100 rounded-tl-none border border-slate-700"
                         }`}
                       >
-                        {/* Imagem / Mídia */}
-                        {msg.type === "image" && msg.mediaUrl && (
-                          <img
-                            src={msg.mediaUrl}
-                            alt="Mídia"
-                            className="rounded-xl mb-2 max-h-60 w-full object-cover"
-                          />
+                        {/* Imagem / Vídeo / Documento PDF */}
+                        {msg.mediaUrl && (
+                          msg.type === "video" || msg.mediaUrl.startsWith("data:video/") || msg.mediaUrl.endsWith(".mp4") || msg.mediaUrl.endsWith(".webm") ? (
+                            <video
+                              src={msg.mediaUrl}
+                              controls
+                              muted
+                              playsInline
+                              preload="metadata"
+                              className="rounded-xl mb-2 max-h-60 w-full object-cover bg-black"
+                            />
+                          ) : msg.mediaUrl.startsWith("data:application/pdf") || msg.mediaUrl.endsWith(".pdf") ? (
+                            <div className="p-3 bg-slate-900/80 border border-slate-700 rounded-xl flex items-center justify-between gap-3 mb-2 text-white">
+                              <div className="flex items-center gap-2">
+                                <FileText size={20} className="text-amber-400" />
+                                <span className="text-xs font-bold truncate max-w-36">{msg.content || "Documento PDF"}</span>
+                              </div>
+                              <a
+                                href={msg.mediaUrl}
+                                download="documento.pdf"
+                                className="px-2.5 py-1 bg-slate-700 hover:bg-slate-600 text-white rounded-lg text-[10px] font-bold cursor-pointer shrink-0"
+                              >
+                                Baixar
+                              </a>
+                            </div>
+                          ) : (
+                            <img
+                              src={msg.mediaUrl}
+                              alt="Mídia"
+                              className="rounded-xl mb-2 max-h-60 w-full object-cover"
+                            />
+                          )
                         )}
 
                         {/* Texto Padrão */}
@@ -413,6 +440,20 @@ function ConnectionsPageContent() {
               <div ref={chatBottomRef} />
             </div>
 
+            {/* Banner de Erro de Arquivo */}
+            {vm.fileError && (
+              <div className="mx-4 mb-2 p-3 bg-rose-500/10 border border-rose-500/30 rounded-xl flex items-center justify-between text-xs text-rose-300 font-medium animate-in fade-in">
+                <span>{vm.fileError}</span>
+                <button
+                  type="button"
+                  onClick={() => vm.setFileError(null)}
+                  className="text-slate-400 hover:text-white p-1"
+                >
+                  <X size={14} />
+                </button>
+              </div>
+            )}
+
             {/* Form de Envio de Mensagem */}
             <div className="p-3 md:p-4 bg-slate-900/90 border-t border-slate-800 shrink-0">
               <form onSubmit={vm.sendMessage} className="flex items-center gap-2">
@@ -421,7 +462,7 @@ function ConnectionsPageContent() {
                   onClick={() => fileInputRef.current?.click()}
                   disabled={vm.isUploading}
                   className="p-2.5 text-slate-400 hover:text-white hover:bg-slate-800 rounded-xl transition-colors cursor-pointer"
-                  title="Enviar Imagem/Mídia"
+                  title="Enviar Foto (15MB), Vídeo (150MB) ou PDF (25MB)"
                 >
                   {vm.isUploading ? (
                     <Loader2 size={18} className="animate-spin text-[#50c878]" />
@@ -434,7 +475,7 @@ function ConnectionsPageContent() {
                   ref={fileInputRef}
                   className="hidden"
                   onChange={handleFileChange}
-                  accept="image/*,video/*,audio/*"
+                  accept="image/*,video/mp4,video/webm,application/pdf"
                 />
 
                 <input

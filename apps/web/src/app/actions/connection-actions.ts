@@ -22,8 +22,10 @@ export async function getFollowStateAction(targetId: string): Promise<boolean> {
 
 export async function getFollowersAction(targetUserId?: string): Promise<Friend[]> {
   try {
+    const user = await getCurrentUser();
     const repo = await getRepository();
-    return await repo.getFollowers(targetUserId);
+    const userId = targetUserId || user?.id;
+    return await repo.getFollowers(userId);
   } catch (error) {
     console.error("Error in getFollowersAction:", error);
     return [];
@@ -32,8 +34,10 @@ export async function getFollowersAction(targetUserId?: string): Promise<Friend[
 
 export async function getFollowingAction(targetUserId?: string): Promise<Friend[]> {
   try {
+    const user = await getCurrentUser();
     const repo = await getRepository();
-    return await repo.getFollowing(targetUserId);
+    const userId = targetUserId || user?.id;
+    return await repo.getFollowing(userId);
   } catch (error) {
     console.error("Error in getFollowingAction:", error);
     return [];
@@ -55,8 +59,10 @@ export async function getFriendshipStatusAction(
 
 export async function getFriendsAction(targetUserId?: string): Promise<Friend[]> {
   try {
+    const user = await getCurrentUser();
     const repo = await getRepository();
-    return await repo.getFriends(targetUserId);
+    const userId = targetUserId || user?.id;
+    return await repo.getFriends(userId);
   } catch (error) {
     console.error("Error in getFriendsAction:", error);
     return [];
@@ -65,8 +71,10 @@ export async function getFriendsAction(targetUserId?: string): Promise<Friend[]>
 
 export async function getPendingRequestsAction(targetUserId?: string): Promise<Friend[]> {
   try {
+    const user = await getCurrentUser();
     const repo = await getRepository();
-    return await repo.getPendingRequests(targetUserId);
+    const userId = targetUserId || user?.id;
+    return await repo.getPendingRequests(userId);
   } catch (error) {
     console.error("Error in getPendingRequestsAction:", error);
     return [];

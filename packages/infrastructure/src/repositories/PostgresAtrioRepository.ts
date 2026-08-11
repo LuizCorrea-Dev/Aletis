@@ -81,12 +81,27 @@ export class PostgresAtrioRepository implements IAtrioRepository {
     item: Omit<AtrioItem, "id" | "vibes" | "authorId" | "authorName" | "authorAvatar" | "dbId">,
     userId?: string
   ): Promise<AtrioItem> {
+    const targetUserId = userId || "00000000-0000-0000-0000-000000000000";
+
+    const userCheck = await this.pool.query("SELECT id FROM users WHERE id = $1 LIMIT 1", [targetUserId]);
+    if (userCheck.rows.length === 0) {
+      await this.pool.query(
+        "INSERT INTO users (id, email, password_hash, role) VALUES ($1, $2, $3, $4) ON CONFLICT (id) DO NOTHING",
+        [targetUserId, `user_${targetUserId.slice(0, 8)}@aletis.app`, "session_autocreated", "user"]
+      );
+      await this.pool.query(
+        `INSERT INTO profiles (id, username, display_name, full_name, avatar_url, vibes_balance)
+         VALUES ($1, $2, $3, $4, $5, 50) ON CONFLICT (id) DO NOTHING`,
+        [targetUserId, `membro_${targetUserId.slice(0, 8)}`, "Membro Aletis", "Membro Aletis", `https://api.dicebear.com/7.x/initials/svg?seed=${targetUserId}`]
+      );
+    }
+
     const { rows } = await this.pool.query(
       `INSERT INTO atrio_items (user_id, title, description, url, tags)
        VALUES ($1, $2, $3, $4, $5)
        RETURNING *`,
       [
-        userId || "00000000-0000-0000-0000-000000000000",
+        targetUserId,
         item.title,
         item.description || null,
         item.url,

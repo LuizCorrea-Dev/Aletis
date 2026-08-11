@@ -70,26 +70,50 @@ export class PostgresPostRepository implements IPostRepository {
     return rows.map((r) => this.applyPrivacyFilter(r, currentUserId));
   }
 
-  async getUserPosts(userId: string, type: "post" | "diary" = "post"): Promise<Post[]> {
-    const query = `
+  async getUserPosts(userId: string, type?: string): Promise<Post[]> {
+    let query = `
       SELECT p.*, pr.display_name as author_name, pr.avatar_url as author_avatar
       FROM posts p
       LEFT JOIN profiles pr ON p.author_id = pr.id
-      WHERE p.author_id = $1 AND p.post_type = $2
-      ORDER BY p.created_at DESC
+      WHERE p.author_id = $1
     `;
-    const { rows } = await this.pool.query(query, [userId, type]);
+    const params: any[] = [userId];
+    if (type) {
+      params.push(type);
+      query += ` AND (p.post_type = $2 OR p.post_type IS NULL)`;
+    }
+    query += ` ORDER BY p.created_at DESC`;
+    const { rows } = await this.pool.query(query, params);
     return rows.map((r) => this.applyPrivacyFilter(r, userId));
   }
 
   async createPost(data: CreatePostData, authorId?: string): Promise<{ success: boolean; message: string }> {
     try {
+      const targetUserId = authorId || (data as any).authorId;
+      if (!targetUserId || targetUserId === "00000000-0000-0000-0000-000000000000") {
+        return { success: false, message: "Sessão de usuário não identificada. Por favor, faça login novamente." };
+      }
+
+      // Verificação defensiva de integridade no Postgres
+      const userCheck = await this.pool.query("SELECT id FROM users WHERE id = $1 LIMIT 1", [targetUserId]);
+      if (userCheck.rows.length === 0) {
+        await this.pool.query(
+          "INSERT INTO users (id, email, password_hash, role) VALUES ($1, $2, $3, $4) ON CONFLICT (id) DO NOTHING",
+          [targetUserId, `user_${targetUserId.slice(0, 8)}@aletis.app`, "session_autocreated", "user"]
+        );
+        await this.pool.query(
+          `INSERT INTO profiles (id, username, display_name, full_name, avatar_url, vibes_balance)
+           VALUES ($1, $2, $3, $4, $5, 50) ON CONFLICT (id) DO NOTHING`,
+          [targetUserId, `membro_${targetUserId.slice(0, 8)}`, "Membro Aletis", "Membro Aletis", `https://api.dicebear.com/7.x/initials/svg?seed=${targetUserId}`]
+        );
+      }
+
       const query = `
         INSERT INTO posts (author_id, content, tags, media_url, is_anonymous, post_type, community_id)
         VALUES ($1, $2, $3, $4, $5, $6, $7)
       `;
       await this.pool.query(query, [
-        authorId || (data as any).authorId || "00000000-0000-0000-0000-000000000000",
+        targetUserId,
         data.content,
         JSON.stringify(data.tags || []),
         data.mediaUrl || null,
@@ -99,7 +123,14 @@ export class PostgresPostRepository implements IPostRepository {
       ]);
       return { success: true, message: "Post criado com sucesso!" };
     } catch (err: any) {
-      return { success: false, message: err.message || "Erro ao criar post" };
+      console.error("Database error in createPost:", err);
+      if (err?.code === "23503" || String(err?.message || "").includes("violates foreign key constraint")) {
+        return {
+          success: false,
+          message: "Sua conta não foi encontrada no banco de dados. Isso ocorre quando o servidor ou banco de dados são reiniciados. Por favor, faça login novamente para revalidar a sua sessão.",
+        };
+      }
+      return { success: false, message: "Não foi possível salvar a publicação no momento. Tente novamente em instantes." };
     }
   }
 

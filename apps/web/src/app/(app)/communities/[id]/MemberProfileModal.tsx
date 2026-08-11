@@ -13,6 +13,8 @@ import {
   Video,
   Image as ImageIcon,
   Loader2,
+  UserPlus,
+  UserCheck,
 } from "lucide-react";
 import { CommunityMember, RoleType } from "@aletis/domain";
 import {
@@ -22,6 +24,12 @@ import {
   banMemberAction,
   muteMemberAction,
 } from "@/app/actions/community-actions";
+import {
+  requestFriendshipAction,
+  toggleFollowAction,
+  getFollowStateAction,
+  getFriendshipStatusAction,
+} from "@/app/actions/connection-actions";
 
 interface MemberProfileModalProps {
   communityId: string;
@@ -48,6 +56,58 @@ export default function MemberProfileModal({
   const [isSaving, setIsSaving] = useState(false);
   const [isKicking, setIsKicking] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+
+  const [friendshipStatus, setFriendshipStatus] = useState<"none" | "pending_sent" | "pending_received" | "accepted">("none");
+  const [isFollowing, setIsFollowing] = useState(false);
+  const [isFriendLoading, setIsFriendLoading] = useState(false);
+  const [isFollowLoading, setIsFollowLoading] = useState(false);
+
+  React.useEffect(() => {
+    if (member.userId && member.userId !== currentUserId) {
+      getFriendshipStatusAction(member.userId).then(setFriendshipStatus);
+      getFollowStateAction(member.userId).then(setIsFollowing);
+    }
+  }, [member.userId, currentUserId]);
+
+  const handleRequestFriendship = async () => {
+    setIsFriendLoading(true);
+    setMessage(null);
+    try {
+      const res = await requestFriendshipAction(member.userId);
+      if (res.success) {
+        setFriendshipStatus("pending_sent");
+        setMessage("Solicitação de amizade enviada!");
+      } else {
+        setMessage(res.message || "Não foi possível enviar solicitação.");
+      }
+    } catch (err: any) {
+      console.error(err);
+      setMessage(err.message || "Erro ao solicitar amizade.");
+    } finally {
+      setIsFriendLoading(false);
+    }
+  };
+
+  const handleToggleFollow = async () => {
+    setIsFollowLoading(true);
+    setMessage(null);
+    try {
+      const res = await toggleFollowAction(member.userId);
+      if (res.success) {
+        setIsFollowing(res.isFollowing);
+        setMessage(
+          res.isFollowing
+            ? `Você agora está seguindo ${member.name}!`
+            : `Você deixou de seguir ${member.name}.`
+        );
+      }
+    } catch (err: any) {
+      console.error(err);
+      setMessage("Erro ao atualizar seguir.");
+    } finally {
+      setIsFollowLoading(false);
+    }
+  };
 
   const canManage =
     (currentUserRole === "OWNER" || currentUserRole === "MODERATOR") &&
@@ -146,6 +206,55 @@ export default function MemberProfileModal({
               {member.role === "MEMBER" && "👤 Membro"}
             </span>
           </div>
+
+          {/* Botões Sociais: Adicionar Amigo & Seguir */}
+          {member.userId !== currentUserId && (
+            <div className="flex gap-2.5 w-full mt-1">
+              <button
+                onClick={handleRequestFriendship}
+                disabled={isFriendLoading || friendshipStatus === "accepted" || friendshipStatus === "pending_sent"}
+                className={`flex-1 py-2.5 px-3 rounded-xl font-bold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer border ${
+                  friendshipStatus === "accepted"
+                    ? "bg-mint-500/20 text-mint-400 border-mint-500/40"
+                    : friendshipStatus === "pending_sent"
+                    ? "bg-slate-800 text-slate-400 border-slate-700"
+                    : "bg-mint-500 hover:bg-mint-600 text-slate-950 border-mint-400 shadow-md active:scale-95"
+                }`}
+              >
+                {isFriendLoading ? (
+                  <Loader2 size={15} className="animate-spin" />
+                ) : (
+                  <>
+                    <UserPlus size={15} />
+                    {friendshipStatus === "accepted"
+                      ? "Amigos"
+                      : friendshipStatus === "pending_sent"
+                      ? "Solicitado"
+                      : "Adicionar Amigo"}
+                  </>
+                )}
+              </button>
+
+              <button
+                onClick={handleToggleFollow}
+                disabled={isFollowLoading}
+                className={`flex-1 py-2.5 px-3 rounded-xl font-bold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer border ${
+                  isFollowing
+                    ? "bg-indigo-500/20 text-indigo-300 border-indigo-500/40"
+                    : "bg-slate-800 hover:bg-slate-700 text-white border-slate-700 active:scale-95"
+                }`}
+              >
+                {isFollowLoading ? (
+                  <Loader2 size={15} className="animate-spin" />
+                ) : (
+                  <>
+                    <UserCheck size={15} />
+                    {isFollowing ? "Seguindo" : "Seguir"}
+                  </>
+                )}
+              </button>
+            </div>
+          )}
 
           {message && (
             <div className="bg-mint-500/10 border border-mint-500/30 text-mint-400 text-xs py-2 px-4 rounded-xl font-medium w-full">

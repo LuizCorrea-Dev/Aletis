@@ -21,16 +21,20 @@ export class PostgresConnectionRepository implements IConnectionRepository {
   async getFollowers(targetUserId?: string): Promise<Friend[]> {
     if (!targetUserId) return [];
     const query = `
-      SELECT c.follower_id as id, pr.username as name, pr.avatar_url as avatar
+      SELECT c.follower_id as id, 
+             COALESCE(pr.username, SPLIT_PART(u.email, '@', 1)) as name, 
+             COALESCE(pr.display_name, pr.full_name, pr.username, SPLIT_PART(u.email, '@', 1)) as display_name,
+             pr.avatar_url as avatar
       FROM connections c
-      JOIN profiles pr ON c.follower_id = pr.id
+      JOIN users u ON c.follower_id = u.id
+      LEFT JOIN profiles pr ON c.follower_id = pr.id
       WHERE c.following_id = $1
     `;
     const { rows } = await this.pool.query(query, [targetUserId]);
     return rows.map((r) => ({
       id: r.id,
-      name: r.name || "Usuário",
-      avatar: r.avatar || "",
+      name: r.name || "usuario",
+      avatar: r.avatar || `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(r.name || "user")}`,
       status: "offline",
       unreadCount: 0,
       isFollowing: false,
@@ -40,16 +44,20 @@ export class PostgresConnectionRepository implements IConnectionRepository {
   async getFollowing(targetUserId?: string): Promise<Friend[]> {
     if (!targetUserId) return [];
     const query = `
-      SELECT c.following_id as id, pr.username as name, pr.avatar_url as avatar
+      SELECT c.following_id as id, 
+             COALESCE(pr.username, SPLIT_PART(u.email, '@', 1)) as name, 
+             COALESCE(pr.display_name, pr.full_name, pr.username, SPLIT_PART(u.email, '@', 1)) as display_name,
+             pr.avatar_url as avatar
       FROM connections c
-      JOIN profiles pr ON c.following_id = pr.id
+      JOIN users u ON c.following_id = u.id
+      LEFT JOIN profiles pr ON c.following_id = pr.id
       WHERE c.follower_id = $1
     `;
     const { rows } = await this.pool.query(query, [targetUserId]);
     return rows.map((r) => ({
       id: r.id,
-      name: r.name || "Usuário",
-      avatar: r.avatar || "",
+      name: r.name || "usuario",
+      avatar: r.avatar || `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(r.name || "user")}`,
       status: "offline",
       unreadCount: 0,
       isFollowing: true,
@@ -83,38 +91,54 @@ export class PostgresConnectionRepository implements IConnectionRepository {
   async getFriends(targetUserId?: string): Promise<Friend[]> {
     if (!targetUserId) return [];
     const query = `
-      SELECT c.following_id as id, pr.username as name, pr.avatar_url as avatar
-      FROM connections c
-      JOIN profiles pr ON c.following_id = pr.id
-      WHERE c.follower_id = $1 AND c.status = 'accepted'
+      SELECT DISTINCT ON (c.friend_id)
+        c.friend_id as id,
+        COALESCE(pr.username, SPLIT_PART(u.email, '@', 1)) as name,
+        COALESCE(pr.display_name, pr.full_name, pr.username, SPLIT_PART(u.email, '@', 1)) as display_name,
+        pr.avatar_url as avatar
+      FROM (
+        SELECT CASE WHEN follower_id = $1 THEN following_id ELSE follower_id END as friend_id
+        FROM connections
+        WHERE (follower_id = $1 OR following_id = $1) 
+          AND status = 'accepted'
+      ) c
+      JOIN users u ON u.id = c.friend_id
+      LEFT JOIN profiles pr ON pr.id = u.id
+      WHERE c.friend_id != $1
     `;
     const { rows } = await this.pool.query(query, [targetUserId]);
     return rows.map((r) => ({
       id: r.id,
-      name: r.name || "Usuário",
-      avatar: r.avatar || "",
+      name: r.name || "usuario",
+      avatar: r.avatar || `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(r.name || "user")}`,
       status: "online",
       unreadCount: 0,
       isFollowing: true,
+      friendshipStatus: "accepted",
     }));
   }
 
   async getPendingRequests(targetUserId?: string): Promise<Friend[]> {
     if (!targetUserId) return [];
     const query = `
-      SELECT c.follower_id as id, pr.username as name, pr.avatar_url as avatar
+      SELECT c.follower_id as id, 
+             COALESCE(pr.username, SPLIT_PART(u.email, '@', 1)) as name, 
+             COALESCE(pr.display_name, pr.full_name, pr.username, SPLIT_PART(u.email, '@', 1)) as display_name,
+             pr.avatar_url as avatar
       FROM connections c
-      JOIN profiles pr ON c.follower_id = pr.id
+      JOIN users u ON c.follower_id = u.id
+      LEFT JOIN profiles pr ON c.follower_id = pr.id
       WHERE c.following_id = $1 AND c.status = 'pending'
     `;
     const { rows } = await this.pool.query(query, [targetUserId]);
     return rows.map((r) => ({
       id: r.id,
-      name: r.name || "Usuário",
-      avatar: r.avatar || "",
+      name: r.name || "usuario",
+      avatar: r.avatar || `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(r.name || "user")}`,
       status: "offline",
       unreadCount: 0,
       isFollowing: false,
+      friendshipStatus: "pending_received",
     }));
   }
 
@@ -123,18 +147,24 @@ export class PostgresConnectionRepository implements IConnectionRepository {
     if (currentUserId === targetId) return { success: false, message: "Você não pode conectar a si mesmo." };
 
     await this.pool.query(
-      "INSERT INTO connections (follower_id, following_id, status) VALUES ($1, $2, 'accepted') ON CONFLICT DO NOTHING",
+      `INSERT INTO connections (follower_id, following_id, status)
+       VALUES ($1, $2, 'pending')
+       ON CONFLICT (follower_id, following_id) DO UPDATE SET status = 'pending'`,
       [currentUserId, targetId]
     );
+
+    const { rows: actorRows } = await this.pool.query("SELECT username, display_name FROM profiles WHERE id = $1", [currentUserId]);
+    const actorName = actorRows[0]?.display_name || actorRows[0]?.username || "Um usuário";
+    const actorUsername = actorRows[0]?.username || currentUserId;
 
     // Criar notificação para o alvo
     await this.pool.query(
       `INSERT INTO notifications (user_id, actor_id, type, title, content, link_url)
-       VALUES ($1, $2, 'FOLLOW', 'Nova Conexão', 'Um novo membro começou a te seguir.', $3)`,
-      [targetId, currentUserId, `/u/${currentUserId}`]
+       VALUES ($1, $2, 'FRIEND_REQUEST', 'Nova Solicitação de Amizade', $3, $4)`,
+      [targetId, currentUserId, `${actorName} enviou uma solicitação de amizade.`, `/u/${actorUsername}`]
     );
 
-    return { success: true, message: "Conexão estabelecida!" };
+    return { success: true, message: "Solicitação de amizade enviada!" };
   }
 
   async acceptFriendship(requesterId: string, currentUserId?: string): Promise<boolean> {
@@ -144,13 +174,20 @@ export class PostgresConnectionRepository implements IConnectionRepository {
       [requesterId, currentUserId]
     );
     await this.pool.query(
-      "INSERT INTO connections (follower_id, following_id, status) VALUES ($1, $2, 'accepted') ON CONFLICT DO NOTHING",
+      `INSERT INTO connections (follower_id, following_id, status)
+       VALUES ($1, $2, 'accepted')
+       ON CONFLICT (follower_id, following_id) DO UPDATE SET status = 'accepted'`,
       [currentUserId, requesterId]
     );
+
+    const { rows: actorRows } = await this.pool.query("SELECT username, display_name FROM profiles WHERE id = $1", [currentUserId]);
+    const actorName = actorRows[0]?.display_name || actorRows[0]?.username || "Um usuário";
+    const actorUsername = actorRows[0]?.username || currentUserId;
+
     await this.pool.query(
       `INSERT INTO notifications (user_id, actor_id, type, title, content, link_url)
-       VALUES ($1, $2, 'FOLLOW', 'Conexão Aceita', 'Sua solicitação de conexão foi aceita!', $3)`,
-      [requesterId, currentUserId, `/u/${currentUserId}`]
+       VALUES ($1, $2, 'FRIEND_ACCEPT', 'Conexão Aceita', $3, $4)`,
+      [requesterId, currentUserId, `${actorName} aceitou sua solicitação de amizade!`, `/u/${actorUsername}`]
     );
     return true;
   }
@@ -158,19 +195,24 @@ export class PostgresConnectionRepository implements IConnectionRepository {
   async getConversations(currentUserId?: string): Promise<Friend[]> {
     if (!currentUserId) return [];
     const query = `
-      SELECT DISTINCT ON (other_id) other_id as id, pr.username as name, pr.avatar_url as avatar
+      SELECT DISTINCT ON (convs.other_id) 
+        convs.other_id as id, 
+        COALESCE(pr.username, SPLIT_PART(u.email, '@', 1)) as name, 
+        COALESCE(pr.display_name, pr.full_name, pr.username, SPLIT_PART(u.email, '@', 1)) as display_name,
+        pr.avatar_url as avatar
       FROM (
         SELECT recipient_id as other_id FROM direct_messages WHERE sender_id = $1
         UNION
         SELECT sender_id as other_id FROM direct_messages WHERE recipient_id = $1
       ) convs
-      JOIN profiles pr ON convs.other_id = pr.id
+      JOIN users u ON convs.other_id = u.id
+      LEFT JOIN profiles pr ON convs.other_id = pr.id
     `;
     const { rows } = await this.pool.query(query, [currentUserId]);
     return rows.map((r) => ({
       id: r.id,
-      name: r.name || "Usuário",
-      avatar: r.avatar || "",
+      name: r.name || "usuario",
+      avatar: r.avatar || `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(r.name || "user")}`,
       status: "online",
       unreadCount: 0,
       isFollowing: true,
