@@ -5,14 +5,16 @@ import {
   MessageCircle, Share2, Pin, AlertCircle,
   AlertTriangle, Trash2, Loader2, Edit2, FileText, Download, Film, Image as ImageIcon
 } from "lucide-react";
-import { VibeZapButton, CommentSection } from "@/components/molecules";
+import { VibeZapButton, CommentSection, UserIdentity } from "@/components/molecules";
 import { cn } from "@/lib/utils";
 
 export interface Post {
   id: string;
   authorId: string;
   authorName: string;
+  authorUsername?: string;
   authorAvatar?: string;
+  authorTipoPerfil?: string;
   content: string;
   mediaUrl?: string;
   tags?: string[];
@@ -38,7 +40,7 @@ export interface PostCardProps extends Post {
 }
 
 export const PostCard = ({
-  id, authorId, authorName, authorAvatar, content, mediaUrl, tags,
+  id, authorId, authorName, authorUsername, authorAvatar, authorTipoPerfil, content, mediaUrl, tags,
   totalVibesReceived, totalComments, userHasLiked, isPinned,
   canDelete, canEdit, canPin, onDelete, onEdit, onPin, onTagClick, onClick, onVibeClick, isVibeLoading, onUpdated
 }: PostCardProps) => {
@@ -209,16 +211,14 @@ export const PostCard = ({
 
           <div className="p-4">
             {/* Autor */}
-            <div className="flex items-center gap-3 mb-3">
-              <img
-                src={avatar}
-                alt={authorName}
-                className="h-10 w-10 rounded-full object-cover border border-slate-600 shrink-0"
+            <div className="flex items-center justify-between mb-3">
+              <UserIdentity
+                name={authorName}
+                username={authorUsername}
+                avatarUrl={avatar}
+                tipoPerfil={authorTipoPerfil}
+                size="md"
               />
-              <div className="min-w-0">
-                <h4 className="text-sm font-semibold text-slate-100 truncate">{authorName}</h4>
-                <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Comunidade</p>
-              </div>
               <div className="ml-auto flex items-center gap-1.5">
                 {canPin && (
                   <button

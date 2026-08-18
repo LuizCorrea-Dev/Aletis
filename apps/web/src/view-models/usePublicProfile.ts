@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useEffect } from "react";
 import { getCurrentUserProfileAction, getPublicProfileByUsernameAction } from "@/app/actions/user-actions";
-import { getPostsAction } from "@/app/actions/post-actions";
+import { getUserPostsAction } from "@/app/actions/post-actions";
 import { getUserAtrioItemsAction } from "@/app/actions/atrio-actions";
 import { getUserCommunitiesAction } from "@/app/actions/community-actions";
 import {
@@ -30,6 +30,7 @@ export interface AtrioItemData {
   id: string;
   title: string;
   url: string;
+  description?: string;
   media_type?: string;
 }
 
@@ -81,32 +82,33 @@ export function usePublicProfile(username: string) {
           vibesCount: dbProfile.vibesCount ?? dbProfile.vibes ?? 50,
           tipoPerfil: dbProfile.tipoPerfil || "comum",
         });
+
+        const userPosts = await getUserPostsAction(dbProfile.id);
+        setPosts(userPosts || []);
+
+        const atrioData = await getUserAtrioItemsAction(dbProfile.id);
+        setAtrioItems(
+          atrioData.map((item) => ({
+            id: item.id,
+            title: item.title,
+            url: item.url,
+            description: item.description,
+          }))
+        );
+
+        const comms = await getUserCommunitiesAction(dbProfile.id);
+        setGroups(
+          comms.map((c) => ({
+            id: c.id,
+            name: c.name,
+            description: c.description,
+            avatarUrl: c.avatarUrl,
+            role: c.currentUserRole || "Membro",
+          }))
+        );
       } else {
         setProfile(null);
       }
-
-      const userPosts = await getPostsAction(undefined, undefined, 1);
-      setPosts(userPosts || []);
-
-      const atrioData = await getUserAtrioItemsAction("current_user");
-      setAtrioItems(
-        atrioData.map((item) => ({
-          id: item.id,
-          title: item.title,
-          url: item.url,
-        }))
-      );
-
-      const comms = await getUserCommunitiesAction("current_user");
-      setGroups(
-        comms.map((c) => ({
-          id: c.id,
-          name: c.name,
-          description: c.description,
-          avatarUrl: c.avatarUrl,
-          role: "Membro",
-        }))
-      );
 
       const followersList = await getFollowersAction();
       const friendsList = await getFriendsAction();

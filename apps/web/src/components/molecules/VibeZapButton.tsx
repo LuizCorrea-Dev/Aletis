@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import Link from "next/link";
 import { Zap, Loader2 } from "lucide-react";
 import { transferVibeAction } from "@/app/actions/post-actions";
 
@@ -111,8 +112,14 @@ export const VibeZapButton: React.FC<VibeZapButtonProps> = ({
 
       {/* Tooltip de Erro / Informação */}
       {errorMessage && (
-        <div className="absolute bottom-full left-0 mb-2 px-3.5 py-2 bg-red-950/95 text-red-200 border border-red-500/80 text-xs font-bold rounded-2xl shadow-2xl z-[100] min-w-max max-w-xs sm:max-w-md whitespace-normal text-left animate-in fade-in zoom-in-95 duration-150 backdrop-blur-md">
-          {errorMessage}
+        <div className="absolute bottom-full left-0 mb-2 px-3.5 py-2 bg-slate-950/95 text-slate-100 border border-amber-500/80 text-xs font-bold rounded-2xl shadow-2xl z-[100] min-w-max max-w-xs sm:max-w-md whitespace-normal text-left animate-in fade-in zoom-in-95 duration-150 backdrop-blur-md flex items-center justify-between gap-3">
+          <span>{errorMessage}</span>
+          <Link
+            href="/billing?tab=vibe"
+            className="px-2.5 py-1 bg-gradient-to-r from-amber-500 to-yellow-500 text-slate-950 rounded-xl font-extrabold text-[11px] hover:brightness-110 shrink-0 shadow-md"
+          >
+            Obter VIBEs
+          </Link>
         </div>
       )}
 

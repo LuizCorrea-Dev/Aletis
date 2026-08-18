@@ -8,4 +8,5 @@ export * from "./repositories/PostgresAtrioRepository";
 export * from "./repositories/PostgresTransactionRepository";
 export * from "./repositories/PostgresSentinelaMemoryRepository";
 export * from "./repositories/PostgresNotificationRepository";
+export * from "./services/StripeFulfillmentService";
 

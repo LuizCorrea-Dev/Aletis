@@ -2,14 +2,16 @@
 
 import { useEffect, useState, useRef } from "react";
 import Link from "next/link";
-import { Feather, Zap, Bell, MessageSquare, UserPlus, Shield, ExternalLink, Loader2 } from "lucide-react";
+import { Feather, Zap, Bell, MessageSquare, UserPlus, Shield, ExternalLink, Loader2, Plus, ShoppingBag } from "lucide-react";
 import { getUserVibesAndNotificationsAction } from "@/app/actions/user-actions";
 import { getDetailedNotificationsAction, markNotificationsAsReadAction, NotificationItem } from "@/app/actions/connection-actions";
+import { UserIdentity } from "@/components/molecules/UserIdentity";
 
 export function Header() {
   const [permanentVibes, setPermanentVibes] = useState(50);
   const [orvalhoVibes, setOrvalhoVibes] = useState(0);
   const [notificationsCount, setNotificationsCount] = useState(0);
+  const [user, setUser] = useState<{ id?: string; name?: string; username?: string; avatarUrl?: string; tipoPerfil?: string } | null>(null);
   const [isOpen, setIsOpen] = useState(false);
   const [items, setItems] = useState<NotificationItem[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -20,12 +22,26 @@ export function Header() {
     setPermanentVibes(res.permanentVibes ?? res.vibes);
     setOrvalhoVibes(res.orvalhoVibes ?? 0);
     setNotificationsCount(res.notifications);
+    if (res.user) setUser(res.user);
   };
 
   useEffect(() => {
     fetchStatus();
     const interval = setInterval(fetchStatus, 10000);
-    return () => clearInterval(interval);
+
+    const handleVibeUpdate = (e: any) => {
+      if (e.detail?.newBalance !== undefined) {
+        setPermanentVibes(e.detail.newBalance);
+      } else {
+        fetchStatus();
+      }
+    };
+
+    window.addEventListener("vibe-updated", handleVibeUpdate);
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener("vibe-updated", handleVibeUpdate);
+    };
   }, []);
 
   const handleTogglePopover = async () => {
@@ -63,25 +79,36 @@ export function Header() {
       </Link>
 
       <div className="flex items-center gap-2 md:gap-3">
-        {/* Saldo Permanente de VIBES */}
-        <div className="flex items-center gap-2 bg-slate-800/80 px-3.5 py-2 rounded-2xl border border-slate-700/80 shadow-inner hover:border-[#FFC300]/50 transition-all select-none">
-          <Zap className="text-[#FFC300] scale-110" size={16} fill="#FFC300" />
-          <span className="font-extrabold text-[#FFC300] tracking-wider text-xs">
-            {permanentVibes} VIBES
-          </span>
-        </div>
+        {/* Botão / Pill Interativo de Comprar VIBE Boosts */}
+        <Link
+          href="/billing?tab=vibe"
+          className="flex items-center gap-2 bg-gradient-to-r from-amber-500/10 via-slate-800 to-amber-500/20 px-3.5 py-1.5 rounded-2xl border border-[#FFC300]/40 shadow-[0_0_15px_rgba(255,195,0,0.15)] hover:border-[#FFC300] hover:shadow-[0_0_20px_rgba(255,195,0,0.3)] transition-all select-none group cursor-pointer"
+          title="Clique para Comprar VIBE Boosts ou Assinatura Profissional"
+        >
+          <div className="flex items-center gap-1.5">
+            <Zap className="text-[#FFC300] fill-[#FFC300] group-hover:scale-125 transition-transform duration-300" size={16} />
+            <span className="font-black text-[#FFC300] tracking-wider text-xs">
+              {permanentVibes} VIBES
+            </span>
+          </div>
+
+          <div className="flex items-center justify-center w-5 h-5 rounded-full bg-[#FFC300] text-slate-950 group-hover:bg-amber-300 transition-colors shadow-sm ml-1">
+            <Plus size={13} strokeWidth={3} />
+          </div>
+        </Link>
 
         {/* Bolinha de Saldo Ativo de Orvalho do Dia (+6) */}
         {orvalhoVibes > 0 && (
-          <div
-            className="flex items-center gap-1.5 bg-cyan-950/80 border border-cyan-500/60 px-3 py-1.5 rounded-2xl shadow-[0_0_15px_rgba(6,182,212,0.3)] select-none transition-all cursor-help animate-pulse"
-            title="Orvalho do Dia: +6 Vibes temporárias ativas por 24h para usar ou doar"
+          <Link
+            href="/billing?tab=vibe"
+            className="flex items-center gap-1.5 bg-cyan-950/80 border border-cyan-500/60 px-3 py-1.5 rounded-2xl shadow-[0_0_15px_rgba(6,182,212,0.3)] hover:border-cyan-400 select-none transition-all cursor-pointer animate-pulse"
+            title="Orvalho do Dia: Vibes temporárias ativas por 24h. Clique para obter saldos permanentes."
           >
             <span className="text-sm">💧</span>
             <span className="font-black text-cyan-300 tracking-wide text-xs">
               +{orvalhoVibes}
             </span>
-          </div>
+          </Link>
         )}
 
         {/* Notificações (Sino + Dropdown) */}
@@ -175,6 +202,16 @@ export function Header() {
             </div>
           )}
         </div>
+
+        {/* User Profile Badge (Avatar + Nome + Selo se Verificado + @username) */}
+        {user && (
+          <div className="hidden sm:flex items-center pl-3 border-l border-slate-800/80">
+            <UserIdentity
+              user={user}
+              size="sm"
+            />
+          </div>
+        )}
       </div>
     </header>
   );

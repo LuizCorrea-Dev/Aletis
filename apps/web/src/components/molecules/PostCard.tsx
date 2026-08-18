@@ -14,6 +14,7 @@ import {
   Download,
 } from "lucide-react";
 import { Avatar } from "../atoms/Avatar";
+import { UserIdentity } from "./UserIdentity";
 import { VibeZapButton } from "./VibeZapButton";
 import { CommentSection } from "./CommentSection";
 
@@ -21,7 +22,9 @@ export interface PostCardProps {
   id: string;
   authorId?: string | null;
   authorName: string;
+  authorUsername?: string | null;
   authorAvatar?: string | null;
+  authorTipoPerfil?: string | null;
   content: string;
   mediaUrl?: string | null;
   tags?: string[];
@@ -44,7 +47,9 @@ export const PostCard: React.FC<PostCardProps> = ({
   id,
   authorId,
   authorName,
+  authorUsername,
   authorAvatar,
+  authorTipoPerfil,
   content,
   mediaUrl,
   tags = [],
@@ -184,17 +189,27 @@ export const PostCard: React.FC<PostCardProps> = ({
           <div className="p-4 md:p-5">
             {/* Header: Autor + Menu de Ações */}
             <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center gap-3">
-                <Avatar src={displayAvatar} alt={displayName} size="md" />
-                <div className="min-w-0">
-                  <h4 className="text-sm font-semibold text-slate-100 truncate">
-                    {displayName}
-                  </h4>
-                  <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">
-                    Aletis
-                  </p>
+              {!isAuthorAnonymous ? (
+                <UserIdentity
+                  name={authorName}
+                  username={authorUsername}
+                  avatarUrl={displayAvatar}
+                  tipoPerfil={authorTipoPerfil}
+                  size="md"
+                />
+              ) : (
+                <div className="flex items-center gap-3">
+                  <Avatar src={null} alt="Anônimo" size="md" />
+                  <div className="min-w-0">
+                    <h4 className="text-sm font-semibold text-slate-100 truncate">
+                      Anônimo
+                    </h4>
+                    <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">
+                      Desabafo Anônimo
+                    </p>
+                  </div>
                 </div>
-              </div>
+              )}
 
               {/* Menu de Opções (Editar / Excluir) */}
               {(canEdit || canDelete) && (

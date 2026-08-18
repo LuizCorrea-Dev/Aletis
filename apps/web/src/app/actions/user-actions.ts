@@ -148,18 +148,18 @@ export async function getUserVibesAndNotificationsAction() {
   try {
     const user = await getCurrentUser();
     if (!user) {
-      return { vibes: 0, notifications: 0, orvalhoVibes: 0 };
+      return { vibes: 0, notifications: 0, orvalhoVibes: 0, user: null };
     }
 
     const pool = getDbPool();
     const { rows } = await pool.query(
-      `SELECT vibes_balance, orvalho_balance, orvalho_expires_at,
+      `SELECT display_name, username, avatar_url, tipo_perfil, vibes_balance, vibe_saldo_real, orvalho_balance, orvalho_expires_at,
               (orvalho_expires_at IS NOT NULL AND orvalho_expires_at > CURRENT_TIMESTAMP) as is_orvalho_active
        FROM profiles WHERE id = $1 LIMIT 1`,
       [user.id]
     );
 
-    const permanent = rows[0]?.vibes_balance ?? 50;
+    const permanent = rows[0]?.vibes_balance ?? rows[0]?.vibe_saldo_real ?? 50;
     const activeOrvalho = rows[0]?.is_orvalho_active ? (rows[0]?.orvalho_balance ?? 0) : 0;
     const totalVibes = permanent + activeOrvalho;
 
@@ -171,10 +171,17 @@ export async function getUserVibesAndNotificationsAction() {
       permanentVibes: permanent,
       orvalhoVibes: activeOrvalho,
       notifications,
+      user: {
+        id: user.id,
+        name: rows[0]?.display_name || user.username,
+        username: rows[0]?.username || user.username,
+        avatarUrl: rows[0]?.avatar_url || `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(user.username)}`,
+        tipoPerfil: rows[0]?.tipo_perfil || "comum",
+      },
     };
   } catch (error) {
     console.error("Error in getUserVibesAndNotificationsAction:", error);
-    return { vibes: 0, notifications: 0, orvalhoVibes: 0 };
+    return { vibes: 0, notifications: 0, orvalhoVibes: 0, user: null };
   }
 }
 

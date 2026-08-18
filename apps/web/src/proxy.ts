@@ -8,11 +8,12 @@ const PROTECTED_PATHS = [
   "/communities",
   "/chat",
   "/invite",
+  "/billing",
 ];
 
 const AUTH_ONLY_PATHS = ["/login", "/register", "/auth"];
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   const sessionCookie = request.cookies.get("aletis_session")?.value;
@@ -33,6 +34,8 @@ export async function middleware(request: NextRequest) {
 
   return NextResponse.next();
 }
+
+export const middleware = proxy;
 
 export const config = {
   matcher: [

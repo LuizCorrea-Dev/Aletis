@@ -1,6 +1,7 @@
 "use client";
 
-import React, { use } from "react";
+import React, { use, useState, useEffect } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   Check,
@@ -19,13 +20,44 @@ import {
   ArrowLeft,
   Footprints,
   X,
+  ChevronLeft,
+  ChevronRight,
+  Film,
+  FileText,
+  ArrowUpRight,
 } from "lucide-react";
 import { usePublicProfile } from "@/view-models/usePublicProfile";
 import { PostCard } from "@/components/molecules/PostCard";
 import { Avatar } from "@/components/atoms/Avatar";
+import { UserIdentity } from "@/components/molecules/UserIdentity";
 
 interface PublicProfilePageProps {
   params: Promise<{ username: string }>;
+}
+
+function parseMediaUrl(mediaUrlStr?: string | null): { url: string | null; isVideo: boolean; isPdf: boolean } {
+  if (!mediaUrlStr) return { url: null, isVideo: false, isPdf: false };
+  let url = mediaUrlStr;
+  try {
+    if (mediaUrlStr.trim().startsWith("[")) {
+      const parsed = JSON.parse(mediaUrlStr);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        url = parsed[0];
+      }
+    }
+  } catch {}
+
+  const isVideo =
+    url.startsWith("data:video/") ||
+    url.endsWith(".mp4") ||
+    url.endsWith(".webm") ||
+    url.includes("video/");
+  const isPdf =
+    url.startsWith("data:application/pdf") ||
+    url.endsWith(".pdf") ||
+    url.includes("application/pdf");
+
+  return { url, isVideo, isPdf };
 }
 
 export default function PublicProfilePage(props: PublicProfilePageProps) {
@@ -46,12 +78,63 @@ export default function PublicProfilePage(props: PublicProfilePageProps) {
     isLoading,
     isProcessing,
     activeTab,
-    selectedPost,
     setActiveTab,
-    setSelectedPost,
     handleFollowToggle,
     handleAddFriend,
   } = usePublicProfile(username);
+
+  // Estado do Modal de Visualização com Navegação Anterior/Próximo (setas)
+  const [viewerState, setViewerState] = useState<{
+    isOpen: boolean;
+    type: "post" | "atrio" | null;
+    index: number;
+  }>({
+    isOpen: false,
+    type: null,
+    index: 0,
+  });
+
+  const handleOpenViewer = (type: "post" | "atrio", index: number) => {
+    setViewerState({ isOpen: true, type, index });
+  };
+
+  const handleCloseViewer = () => {
+    setViewerState({ isOpen: false, type: null, index: 0 });
+  };
+
+  const handlePrevItem = () => {
+    setViewerState((prev) => ({
+      ...prev,
+      index: Math.max(0, prev.index - 1),
+    }));
+  };
+
+  const handleNextItem = () => {
+    const maxIndex =
+      viewerState.type === "post" ? posts.length - 1 : atrioItems.length - 1;
+    setViewerState((prev) => ({
+      ...prev,
+      index: Math.min(maxIndex, prev.index + 1),
+    }));
+  };
+
+  // Suporte a teclas de atalho (Seta Esquerda, Seta Direita, Esc)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (!viewerState.isOpen) return;
+
+      if (e.key === "ArrowLeft") {
+        handlePrevItem();
+      } else if (e.key === "ArrowRight") {
+        handleNextItem();
+      } else if (e.key === "Escape") {
+        handleCloseViewer();
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [viewerState.isOpen, viewerState.type, viewerState.index, posts.length, atrioItems.length]);
 
   const handleChat = () => {
     router.push("/connections");
@@ -86,6 +169,10 @@ export default function PublicProfilePage(props: PublicProfilePageProps) {
       </div>
     );
   }
+
+  const currentPost = viewerState.type === "post" ? posts[viewerState.index] : null;
+  const currentAtrio = viewerState.type === "atrio" ? atrioItems[viewerState.index] : null;
+  const totalViewerItems = viewerState.type === "post" ? posts.length : atrioItems.length;
 
   return (
     <div className="w-full max-w-4xl mx-auto px-4 py-6 pb-28">
@@ -142,7 +229,7 @@ export default function PublicProfilePage(props: PublicProfilePageProps) {
                   </span>
                 ) : profile.tipoPerfil === "verificado" ? (
                   <span className="text-[var(--tier-verificado-color)]" title="Profissional Verificado">
-                    <ShieldCheck size={20} />
+                    <ShieldCheck size={20} className="fill-sky-400/20 text-sky-400" />
                   </span>
                 ) : (
                   <span className="text-[var(--tier-comum-color)]" title="Membro Comum">
@@ -263,7 +350,7 @@ export default function PublicProfilePage(props: PublicProfilePageProps) {
           }`}
         >
           <Grid size={18} />
-          <span>Publicações</span>
+          <span>Publicações ({posts.length})</span>
         </button>
 
         <button
@@ -276,7 +363,7 @@ export default function PublicProfilePage(props: PublicProfilePageProps) {
           }`}
         >
           <Sparkles size={18} />
-          <span>Átrio</span>
+          <span>Átrio ({atrioItems.length})</span>
         </button>
 
         <button
@@ -289,7 +376,7 @@ export default function PublicProfilePage(props: PublicProfilePageProps) {
           }`}
         >
           <Building2 size={18} />
-          <span>Grupos</span>
+          <span>Grupos ({groups.length})</span>
         </button>
       </div>
 
@@ -299,38 +386,63 @@ export default function PublicProfilePage(props: PublicProfilePageProps) {
           <div>
             {posts.length > 0 ? (
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 md:gap-4">
-                {posts.map((post) => (
-                  <div
-                    key={post.id}
-                    onClick={() => setSelectedPost(post)}
-                    className="aspect-square group relative overflow-hidden rounded-2xl bg-slate-800/80 border border-slate-700/60 cursor-pointer shadow-md"
-                  >
-                    {post.media_url ? (
-                      <img
-                        src={post.media_url}
-                        alt="Post media"
-                        className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-                      />
-                    ) : (
-                      <div className="w-full h-full p-4 flex items-center justify-center text-center text-slate-300 text-xs bg-slate-900/80 leading-relaxed overflow-hidden font-medium">
-                        {post.content.length > 80
-                          ? `${post.content.slice(0, 80)}...`
-                          : post.content}
-                      </div>
-                    )}
+                {posts.map((post, idx) => {
+                  const media = parseMediaUrl(post.mediaUrl || post.media_url);
+                  const likesCount = post.totalVibesReceived ?? post.likes_count ?? 0;
+                  const commentsCount = post.totalComments ?? post.comments_count ?? 0;
 
-                    <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-4 text-white font-bold text-xs backdrop-blur-[2px]">
-                      <span className="flex items-center gap-1">
-                        <Zap size={15} fill="currentColor" className="text-amber-400" />
-                        {post.likes_count || 0}
-                      </span>
-                      <span className="flex items-center gap-1">
-                        <MessageCircle size={15} fill="currentColor" className="text-blue-400" />
-                        {post.comments_count || 0}
-                      </span>
+                  return (
+                    <div
+                      key={post.id}
+                      onClick={() => handleOpenViewer("post", idx)}
+                      className="aspect-square group relative overflow-hidden rounded-2xl bg-slate-800/80 border border-slate-700/60 cursor-pointer shadow-md hover:border-[#50c878]/60 transition-all"
+                    >
+                      {media.url ? (
+                        media.isVideo ? (
+                          <div className="w-full h-full relative">
+                            <video
+                              src={media.url}
+                              className="w-full h-full object-cover"
+                              muted
+                              playsInline
+                            />
+                            <span className="absolute top-2 right-2 p-1.5 bg-black/60 rounded-full text-white backdrop-blur-sm">
+                              <Film size={14} />
+                            </span>
+                          </div>
+                        ) : media.isPdf ? (
+                          <div className="w-full h-full p-4 flex flex-col items-center justify-center text-center bg-slate-900/90 text-slate-300">
+                            <FileText size={32} className="text-[#50c878] mb-2" />
+                            <span className="text-[11px] font-bold">Documento PDF</span>
+                          </div>
+                        ) : (
+                          <img
+                            src={media.url}
+                            alt="Mídia da publicação"
+                            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                          />
+                        )
+                      ) : (
+                        <div className="w-full h-full p-4 flex items-center justify-center text-center text-slate-300 text-xs bg-slate-900/80 leading-relaxed overflow-hidden font-medium">
+                          {post.content.length > 90
+                            ? `${post.content.slice(0, 90)}...`
+                            : post.content}
+                        </div>
+                      )}
+
+                      <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-4 text-white font-bold text-xs backdrop-blur-[2px]">
+                        <span className="flex items-center gap-1">
+                          <Zap size={15} fill="currentColor" className="text-amber-400" />
+                          {likesCount}
+                        </span>
+                        <span className="flex items-center gap-1">
+                          <MessageCircle size={15} fill="currentColor" className="text-blue-400" />
+                          {commentsCount}
+                        </span>
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             ) : (
               <div className="py-16 text-center text-slate-400 border border-dashed border-slate-800 rounded-3xl bg-slate-900/20">
@@ -344,21 +456,50 @@ export default function PublicProfilePage(props: PublicProfilePageProps) {
           <div>
             {atrioItems.length > 0 ? (
               <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                {atrioItems.map((item) => (
-                  <div
-                    key={item.id}
-                    className="relative group rounded-2xl overflow-hidden cursor-pointer aspect-[3/4] bg-slate-800 border border-slate-700/60 shadow-md"
-                  >
-                    <img
-                      src={item.url}
-                      alt={item.title}
-                      className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-end p-4">
-                      <h3 className="text-white font-bold text-sm truncate">{item.title}</h3>
+                {atrioItems.map((item, idx) => {
+                  const media = parseMediaUrl(item.url);
+
+                  return (
+                    <div
+                      key={item.id}
+                      onClick={() => handleOpenViewer("atrio", idx)}
+                      className="relative group rounded-2xl overflow-hidden cursor-pointer aspect-[3/4] bg-slate-800 border border-slate-700/60 shadow-md hover:border-[#50c878]/60 transition-all"
+                    >
+                      {media.url ? (
+                        media.isVideo ? (
+                          <div className="w-full h-full relative">
+                            <video
+                              src={media.url}
+                              className="w-full h-full object-cover"
+                              muted
+                              playsInline
+                            />
+                            <span className="absolute top-2 right-2 p-1.5 bg-black/60 rounded-full text-white backdrop-blur-sm">
+                              <Film size={14} />
+                            </span>
+                          </div>
+                        ) : (
+                          <img
+                            src={media.url}
+                            alt={item.title}
+                            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                          />
+                        )
+                      ) : (
+                        <div className="w-full h-full p-4 flex items-center justify-center text-center text-white bg-slate-900 font-bold">
+                          {item.title}
+                        </div>
+                      )}
+
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-end p-4">
+                        <h3 className="text-white font-bold text-sm truncate">{item.title}</h3>
+                        {item.description && (
+                          <p className="text-xs text-slate-300 line-clamp-1 mt-0.5">{item.description}</p>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             ) : (
               <div className="py-16 text-center text-slate-400 border border-dashed border-slate-800 rounded-3xl bg-slate-900/20">
@@ -373,23 +514,32 @@ export default function PublicProfilePage(props: PublicProfilePageProps) {
             {groups.length > 0 ? (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {groups.map((group) => (
-                  <div
+                  <Link
                     key={group.id}
-                    className="flex items-center gap-4 bg-[#1e293b] p-4 rounded-2xl border border-slate-700/80 shadow-md"
+                    href={`/communities/${group.id}`}
+                    className="flex items-center gap-4 bg-[#1e293b] hover:bg-slate-800/90 p-4 rounded-2xl border border-slate-700/80 hover:border-[#50c878]/60 shadow-md transition-all cursor-pointer group"
                   >
                     <img
-                      src={group.avatarUrl}
+                      src={group.avatarUrl || "https://api.dicebear.com/7.x/identicon/svg?seed=Group"}
                       alt={group.name}
-                      className="w-12 h-12 rounded-xl object-cover border border-slate-700"
+                      className="w-12 h-12 rounded-xl object-cover border border-slate-700 group-hover:scale-105 transition-transform"
                     />
                     <div className="flex-1 min-w-0">
-                      <h3 className="font-bold text-white text-sm truncate">{group.name}</h3>
-                      <p className="text-xs text-slate-400 truncate">{group.description}</p>
+                      <h3 className="font-bold text-white text-sm truncate group-hover:text-[#50c878] transition-colors">
+                        {group.name}
+                      </h3>
+                      <p className="text-xs text-slate-400 truncate">{group.description || "Comunidade da Aletis"}</p>
                     </div>
-                    <span className="text-[10px] font-extrabold px-2.5 py-1 rounded-full bg-slate-800 text-[#50c878] border border-slate-700 uppercase tracking-wide">
-                      {group.role}
-                    </span>
-                  </div>
+
+                    <div className="flex flex-col items-end gap-1.5 shrink-0">
+                      <span className="text-[10px] font-extrabold px-2.5 py-0.5 rounded-full bg-slate-800 text-[#50c878] border border-slate-700 uppercase tracking-wide">
+                        {group.role}
+                      </span>
+                      <span className="text-xs font-bold text-[#50c878] flex items-center gap-0.5 opacity-80 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all">
+                        Visitar <ArrowUpRight size={13} />
+                      </span>
+                    </div>
+                  </Link>
                 ))}
               </div>
             ) : (
@@ -401,36 +551,124 @@ export default function PublicProfilePage(props: PublicProfilePageProps) {
         )}
       </div>
 
-      {/* Modal de Detalhes do Post */}
-      {selectedPost && (
+      {/* Modal / Overlay de Detalhes da Publicação com Setas de Navegação */}
+      {viewerState.isOpen && (
         <div
-          className="fixed inset-0 z-[200] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in"
-          onClick={() => setSelectedPost(null)}
+          className="fixed inset-0 z-[200] bg-black/85 backdrop-blur-md flex items-center justify-center p-4 md:p-6 animate-in fade-in"
+          onClick={handleCloseViewer}
         >
+          {/* Top Bar: Contador + Fechar */}
+          <div className="absolute top-4 left-4 md:top-6 md:left-8 z-50 flex items-center gap-3">
+            <span className="px-3 py-1 bg-slate-800/80 text-slate-300 font-extrabold text-xs rounded-full border border-slate-700 backdrop-blur-md">
+              {viewerState.type === "post"
+                ? `Publicação ${viewerState.index + 1} de ${totalViewerItems}`
+                : `Átrio ${viewerState.index + 1} de ${totalViewerItems}`}
+            </span>
+          </div>
+
+          <div className="absolute top-4 right-4 md:top-6 md:right-8 z-50">
+            <button
+              type="button"
+              onClick={handleCloseViewer}
+              className="p-2.5 bg-slate-800/80 hover:bg-slate-700 text-white rounded-full backdrop-blur-md border border-white/10 transition-colors cursor-pointer shadow-lg"
+              title="Fechar (Esc)"
+            >
+              <X size={18} />
+            </button>
+          </div>
+
+          {/* Seta Esquerda (<) */}
+          {viewerState.index > 0 && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                handlePrevItem();
+              }}
+              className="absolute left-2 md:left-6 top-1/2 -translate-y-1/2 p-3 bg-slate-800/90 hover:bg-[#50c878] hover:text-[#0f172a] text-white rounded-full border border-slate-700 shadow-2xl transition-all cursor-pointer z-50 active:scale-90"
+              title="Publicação Anterior (Seta Esquerda)"
+            >
+              <ChevronLeft size={24} />
+            </button>
+          )}
+
+          {/* Seta Direita (>) */}
+          {viewerState.index < totalViewerItems - 1 && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleNextItem();
+              }}
+              className="absolute right-2 md:right-6 top-1/2 -translate-y-1/2 p-3 bg-slate-800/90 hover:bg-[#50c878] hover:text-[#0f172a] text-white rounded-full border border-slate-700 shadow-2xl transition-all cursor-pointer z-50 active:scale-90"
+              title="Próxima Publicação (Seta Direita)"
+            >
+              <ChevronRight size={24} />
+            </button>
+          )}
+
+          {/* Conteúdo do Modal */}
           <div
-            className="w-full max-w-xl max-h-[90vh] overflow-y-auto no-scrollbar relative"
+            className="w-full max-w-2xl max-h-[85vh] overflow-y-auto no-scrollbar relative my-auto"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="absolute top-3 right-3 z-50">
-              <button
-                type="button"
-                onClick={() => setSelectedPost(null)}
-                className="p-2 bg-slate-800/80 hover:bg-slate-700 text-white rounded-full backdrop-blur-md border border-white/10 transition-colors cursor-pointer"
-              >
-                <X size={16} />
-              </button>
-            </div>
+            {viewerState.type === "post" && currentPost && (
+              <PostCard
+                id={currentPost.id}
+                authorName={profile.name}
+                authorUsername={profile.username}
+                authorAvatar={profile.avatarUrl}
+                authorTipoPerfil={profile.tipoPerfil}
+                content={currentPost.content}
+                mediaUrl={currentPost.mediaUrl || currentPost.media_url}
+                tags={currentPost.tags}
+                totalVibesReceived={currentPost.totalVibesReceived ?? currentPost.likes_count ?? 0}
+                totalComments={currentPost.totalComments ?? currentPost.comments_count ?? 0}
+              />
+            )}
 
-            <PostCard
-              id={selectedPost.id}
-              authorName={profile.name}
-              authorAvatar={profile.avatarUrl}
-              content={selectedPost.content}
-              mediaUrl={selectedPost.media_url}
-              tags={selectedPost.tags}
-              totalVibesReceived={selectedPost.likes_count || 0}
-              totalComments={selectedPost.comments_count || 0}
-            />
+            {viewerState.type === "atrio" && currentAtrio && (
+              <div className="bg-[#1e293b] border border-slate-700 rounded-3xl overflow-hidden shadow-2xl p-4 md:p-6 text-white">
+                <div className="mb-4">
+                  <UserIdentity
+                    name={profile.name}
+                    username={profile.username}
+                    avatarUrl={profile.avatarUrl}
+                    tipoPerfil={profile.tipoPerfil}
+                    size="md"
+                  />
+                </div>
+
+                <div className="relative rounded-2xl overflow-hidden bg-slate-900 border border-slate-800 max-h-[60vh] flex items-center justify-center mb-4">
+                  {(() => {
+                    const media = parseMediaUrl(currentAtrio.url);
+                    if (!media.url) return null;
+                    if (media.isVideo) {
+                      return (
+                        <video
+                          src={media.url}
+                          controls
+                          autoPlay
+                          className="max-h-[55vh] w-auto mx-auto object-contain rounded-xl"
+                        />
+                      );
+                    }
+                    return (
+                      <img
+                        src={media.url}
+                        alt={currentAtrio.title}
+                        className="max-h-[55vh] w-auto mx-auto object-contain rounded-xl"
+                      />
+                    );
+                  })()}
+                </div>
+
+                <h3 className="text-xl font-bold font-display text-white mb-2">{currentAtrio.title}</h3>
+                {currentAtrio.description && (
+                  <p className="text-sm text-slate-300 leading-relaxed font-medium">{currentAtrio.description}</p>
+                )}
+              </div>
+            )}
           </div>
         </div>
       )}

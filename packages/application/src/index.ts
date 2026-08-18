@@ -10,3 +10,4 @@ export * from "./use-cases/ManageConnections";
 export * from "./use-cases/ManageChat";
 export * from "./use-cases/ManageAtrio";
 export * from "./use-cases/UpdateProfileUseCase";
+export * from "./use-cases/CreateCheckoutSession";

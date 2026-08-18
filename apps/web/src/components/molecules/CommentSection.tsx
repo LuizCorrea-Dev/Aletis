@@ -12,6 +12,7 @@ import {
   Sparkles,
 } from "lucide-react";
 import { Avatar } from "../atoms/Avatar";
+import { UserIdentity } from "./UserIdentity";
 import { VibeZapButton } from "./VibeZapButton";
 import {
   getCommentsAction,
@@ -139,14 +140,17 @@ export const CommentSection: React.FC<CommentSectionProps> = ({
         className={`${isReply ? "ml-6 mt-2.5 border-l-2 border-slate-700/50 pl-3" : "mt-3"}`}
       >
         <div className="flex items-start gap-3 bg-slate-800/40 p-3 rounded-xl border border-slate-700/50 group hover:border-slate-700 transition-colors">
-          <Avatar src={comment.authorAvatar} alt={comment.authorName} size="sm" />
           <div className="flex-1 min-w-0">
             <div className="flex items-center justify-between mb-1">
               <div className="flex items-center gap-2">
-                <span className="font-bold text-xs text-[#50c878] truncate">
-                  {comment.authorName}
-                </span>
-                <span className="text-[9px] text-slate-500 font-medium">
+                <UserIdentity
+                  name={comment.authorName}
+                  username={(comment as any).authorUsername}
+                  avatarUrl={comment.authorAvatar}
+                  tipoPerfil={(comment as any).authorTipoPerfil}
+                  size="xs"
+                />
+                <span className="text-[9px] text-slate-500 font-medium shrink-0">
                   {comment.createdAt}
                 </span>
               </div>

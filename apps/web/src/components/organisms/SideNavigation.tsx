@@ -10,6 +10,7 @@ import {
   Building2,
   MessageCircle,
   LogOut,
+  Zap,
 } from "lucide-react";
 import { logoutAction } from "@/app/actions/user-actions";
 
@@ -18,7 +19,8 @@ const NAV_ITEMS = [
   { label: "Átrio", path: "/atrio", icon: Sparkles, color: "#2dd4bf" },
   { label: "Conexões", path: "/connections", icon: MessageCircle, color: "#3b82f6" },
   { label: "Comunidades", path: "/communities", icon: Building2, color: "#a855f7" },
-  { label: "Perfil", path: "/profile", icon: User, color: "#FFC300" },
+  { label: "Planos & VIBE", path: "/billing", icon: Zap, color: "#FFC300", hideOnMobile: true },
+  { label: "Perfil", path: "/profile", icon: User, color: "#e2e8f0" },
 ];
 
 export const SideNavigation: React.FC = () => {
@@ -91,7 +93,7 @@ export const SideNavigation: React.FC = () => {
       {/* Mobile Bottom Navigation */}
       <nav className="fixed bottom-0 left-0 right-0 z-50 xl:hidden bg-slate-950/90 backdrop-blur-md border-t border-slate-700/80 px-4 py-2">
         <div className="flex items-center justify-around max-w-md mx-auto">
-          {NAV_ITEMS.map((item) => {
+          {NAV_ITEMS.filter((item) => !item.hideOnMobile).map((item) => {
             const isActive = pathname === item.path || (item.path === "/feed" && pathname === "/");
             const Icon = item.icon;
 

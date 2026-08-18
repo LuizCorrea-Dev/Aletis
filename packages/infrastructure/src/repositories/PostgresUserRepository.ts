@@ -71,7 +71,7 @@ export class PostgresUserRepository implements IUserRepository {
       const data = rows[0];
 
       const activeOrvalho = data.is_orvalho_active ? (data.orvalho_balance ?? 0) : 0;
-      const permanentVibes = data.vibes_balance ?? 50;
+      const permanentVibes = data.vibes_balance ?? data.vibe_saldo_real ?? 50;
 
       return {
         id: data.id,
@@ -113,6 +113,7 @@ export class PostgresUserRepository implements IUserRepository {
           p.avatar_url,
           p.banner_url,
           p.vibes_balance,
+          p.vibe_saldo_real,
           p.tipo_perfil,
           p.phone,
           p.country_code,
@@ -134,6 +135,7 @@ export class PostgresUserRepository implements IUserRepository {
       const data = rows[0];
 
       const cleanUsername = data.username || username.trim();
+      const permanentVibes = data.vibes_balance ?? data.vibe_saldo_real ?? 50;
 
       return {
         id: data.id,
@@ -143,8 +145,8 @@ export class PostgresUserRepository implements IUserRepository {
         status: data.status || "Em busca de equilíbrio.",
         avatarUrl: data.avatar_url || `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(cleanUsername)}`,
         bannerUrl: data.banner_url || "",
-        vibes: data.vibes_balance ?? 50,
-        vibeSaldoReal: data.vibes_balance ?? 50,
+        vibes: permanentVibes,
+        vibeSaldoReal: permanentVibes,
         vibeOrvalho: 0,
         ultimaDataOrvalho: null,
         autoridadeScore: 100,
