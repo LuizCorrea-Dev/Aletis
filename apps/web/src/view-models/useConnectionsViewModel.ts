@@ -17,6 +17,21 @@ import {
 } from "@/app/actions/connection-actions";
 import { Friend, PrivateMessage, MessageType } from "@aletis/domain";
 
+import { sendSentinelaChatMessageAction } from "@/app/actions/sentinela-chat-actions";
+
+export const SENTINELA_BOT_ID = "00000000-0000-0000-0000-000000000001";
+
+export const SENTINELA_CONTACT: Friend = {
+  id: SENTINELA_BOT_ID,
+  name: "Sentinela 🌿",
+  avatar: "https://api.dicebear.com/7.x/bottts/svg?seed=Sentinela",
+  status: "online",
+  unreadCount: 0,
+  isFollowing: true,
+  isCloseFriend: true,
+  friendshipStatus: "accepted",
+};
+
 export type ConnectionsTab = "friends" | "dms" | "favorites";
 
 export interface ConnectionsViewModelOptions {
@@ -37,6 +52,7 @@ export function useConnectionsViewModel(options: ConnectionsViewModelOptions = {
   const [isLoadingList, setIsLoadingList] = useState(true);
   const [isLoadingMessages, setIsLoadingMessages] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
+  const [isTypingSentinela, setIsTypingSentinela] = useState(false);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
 
   // 1. Obter Usuário Autenticado
@@ -60,12 +76,16 @@ export function useConnectionsViewModel(options: ConnectionsViewModelOptions = {
       setFavoritesList(favorites);
 
       if (options.initialUser && !activeChat) {
-        const found =
-          convs.find((c) => c.id === options.initialUser) ||
-          friends.find((f) => f.id === options.initialUser) ||
-          favorites.find((fav) => fav.id === options.initialUser);
-        if (found) {
-          setActiveChat(found);
+        if (options.initialUser === SENTINELA_BOT_ID || options.initialUser === "sentinela-bot") {
+          setActiveChat(SENTINELA_CONTACT);
+        } else {
+          const found =
+            convs.find((c) => c.id === options.initialUser) ||
+            friends.find((f) => f.id === options.initialUser) ||
+            favorites.find((fav) => fav.id === options.initialUser);
+          if (found) {
+            setActiveChat(found);
+          }
         }
       }
     } catch (err) {
@@ -101,16 +121,25 @@ export function useConnectionsViewModel(options: ConnectionsViewModelOptions = {
 
   const friendIds = new Set(friendsList.map((f) => f.id));
 
-  const friendsTabItems: Friend[] = friendsList.map((friend) => {
-    const conv = conversations.find((c) => c.id === friend.id);
-    return conv ? { ...friend, ...conv, friendshipStatus: "accepted" as const } : friend;
-  });
+  const friendsTabItems: Friend[] = [
+    SENTINELA_CONTACT,
+    ...friendsList.map((friend) => {
+      const conv = conversations.find((c) => c.id === friend.id);
+      return conv ? { ...friend, ...conv, friendshipStatus: "accepted" as const } : friend;
+    }),
+  ];
 
-  const dmsTabItems: Friend[] = conversations.filter(
-    (conv) => !friendIds.has(conv.id) && conv.friendshipStatus !== "accepted"
-  );
+  const dmsTabItems: Friend[] = [
+    SENTINELA_CONTACT,
+    ...conversations.filter(
+      (conv) => !friendIds.has(conv.id) && conv.friendshipStatus !== "accepted" && conv.id !== SENTINELA_BOT_ID
+    ),
+  ];
 
-  const favoritesTabItems: Friend[] = friendsTabItems.filter((f) => f.isCloseFriend === true);
+  const favoritesTabItems: Friend[] = [
+    SENTINELA_CONTACT,
+    ...friendsTabItems.filter((f) => f.isCloseFriend === true && f.id !== SENTINELA_BOT_ID),
+  ];
 
   const getDisplayedList = () => {
     let baseList: Friend[] = [];
@@ -126,7 +155,7 @@ export function useConnectionsViewModel(options: ConnectionsViewModelOptions = {
   const totalUnreadDMs = dmsTabItems.reduce((acc, c) => acc + (c.unreadCount || 0), 0);
 
   const toggleFollow = async () => {
-    if (!activeChat) return;
+    if (!activeChat || activeChat.id === SENTINELA_BOT_ID) return;
     const res = await toggleFollowAction(activeChat.id);
     if (res.success) {
       setActiveChat((prev) => (prev ? { ...prev, isFollowing: res.isFollowing } : null));
@@ -135,7 +164,7 @@ export function useConnectionsViewModel(options: ConnectionsViewModelOptions = {
   };
 
   const requestFriendship = async () => {
-    if (!activeChat) return;
+    if (!activeChat || activeChat.id === SENTINELA_BOT_ID) return;
     setActionLoading("friend");
     const res = await requestFriendshipAction(activeChat.id);
     if (res.success) {
@@ -146,7 +175,7 @@ export function useConnectionsViewModel(options: ConnectionsViewModelOptions = {
   };
 
   const acceptFriendship = async () => {
-    if (!activeChat) return;
+    if (!activeChat || activeChat.id === SENTINELA_BOT_ID) return;
     setActionLoading("friend");
     const res = await acceptFriendshipAction(activeChat.id);
     if (res.success) {
@@ -158,7 +187,7 @@ export function useConnectionsViewModel(options: ConnectionsViewModelOptions = {
   };
 
   const removeFriendship = async () => {
-    if (!activeChat) return;
+    if (!activeChat || activeChat.id === SENTINELA_BOT_ID) return;
     setActionLoading("friend");
     const res = await removeFriendshipAction(activeChat.id);
     if (res.success) {
@@ -170,7 +199,7 @@ export function useConnectionsViewModel(options: ConnectionsViewModelOptions = {
 
   const toggleFavoriteFriend = async (friendId?: string) => {
     const targetId = friendId || activeChat?.id;
-    if (!targetId) return;
+    if (!targetId || targetId === SENTINELA_BOT_ID) return;
 
     setActionLoading("favorite");
     const res = await toggleCloseFriendAction(targetId);
@@ -202,10 +231,27 @@ export function useConnectionsViewModel(options: ConnectionsViewModelOptions = {
 
     setMessages((prev) => [...prev, newMsg]);
 
-    const res = await sendMessageAction(activeChat.id, textToSend, "text");
-    if (res.success && res.data) {
-      setMessages((prev) => prev.map((m) => (m.id === newMsg.id ? res.data : m)));
-      loadConnectionsData();
+    if (activeChat.id === SENTINELA_BOT_ID || activeChat.id === "sentinela-bot") {
+      setIsTypingSentinela(true);
+      try {
+        const res = await sendSentinelaChatMessageAction(textToSend);
+        if (res.success && res.botMsg) {
+          setMessages((prev) => {
+            const filtered = prev.filter((m) => m.id !== newMsg.id);
+            return [...filtered, res.userMsg || newMsg, res.botMsg!];
+          });
+        }
+      } catch (err) {
+        console.error("Erro ao comunicar com Sentinela:", err);
+      } finally {
+        setIsTypingSentinela(false);
+      }
+    } else {
+      const res = await sendMessageAction(activeChat.id, textToSend, "text");
+      if (res.success && res.data) {
+        setMessages((prev) => prev.map((m) => (m.id === newMsg.id ? res.data : m)));
+        loadConnectionsData();
+      }
     }
   };
 
@@ -288,6 +334,7 @@ export function useConnectionsViewModel(options: ConnectionsViewModelOptions = {
     isLoadingList,
     isLoadingMessages,
     isUploading,
+    isTypingSentinela,
     fileError,
     setFileError,
     actionLoading,

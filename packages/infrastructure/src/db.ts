@@ -41,6 +41,14 @@ async function ensureBillingTables(pool: Pool) {
       ALTER TABLE vibe_transactions ADD COLUMN IF NOT EXISTS referencia_id VARCHAR(255);
       ALTER TABLE vibe_transactions DROP CONSTRAINT IF EXISTS vibe_transactions_type_check;
       CREATE UNIQUE INDEX IF NOT EXISTS idx_vibe_transactions_referencia ON vibe_transactions(referencia_id) WHERE referencia_id IS NOT NULL;
+
+      INSERT INTO users (id, email, password_hash)
+      VALUES ('00000000-0000-0000-0000-000000000001', 'sentinela@aletis.internal', '$2a$10$SystemBotHashForSentinelaAletis000')
+      ON CONFLICT (id) DO NOTHING;
+
+      INSERT INTO profiles (id, username, display_name, avatar_url, bio)
+      VALUES ('00000000-0000-0000-0000-000000000001', 'sentinela', 'Sentinela 🌿', 'https://api.dicebear.com/7.x/bottts/svg?seed=Sentinela', 'Guardião & Mentor IA Dual-Brain no Aletis')
+      ON CONFLICT (id) DO NOTHING;
     `);
   } catch (err) {
     console.error("Auto-migration ensureBillingTables notice:", err);

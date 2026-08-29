@@ -7,15 +7,14 @@ interface FloatingLeavesProps {
   count?: number;
 }
 
-export const FloatingLeaves: React.FC<FloatingLeavesProps> = ({ count = 10 }) => {
+export const FloatingLeaves: React.FC<FloatingLeavesProps> = ({ count = 12 }) => {
   return (
     <div className="floating-leaves-area">
       <style dangerouslySetInnerHTML={{ __html: `
         .floating-leaves-area {
-          background: var(--theme-background);
-          width: 100%;
-          height: 100%;
-          position: absolute;
+          width: 100vw;
+          height: 100vh;
+          position: fixed;
           z-index: 0;
           top: 0;
           left: 0;
@@ -38,37 +37,40 @@ export const FloatingLeaves: React.FC<FloatingLeavesProps> = ({ count = 10 }) =>
           list-style: none;
           width: 20px;
           height: 20px;
-          animation: float-up 25s linear infinite;
+          animation: float-up 22s linear infinite;
           bottom: -150px;
-          color: var(--theme-primary);
-          opacity: 0.25;
+          color: #50c878;
+          opacity: 0.35;
+          filter: drop-shadow(0 0 6px rgba(80, 200, 120, 0.4));
         }
-        .floating-leaves-circles li:nth-child(1) { left: 25%; width: 80px; height: 80px; animation-delay: 0s; animation-duration: 25s; }
-        .floating-leaves-circles li:nth-child(2) { left: 10%; width: 20px; height: 20px; animation-delay: 2s; animation-duration: 12s; }
-        .floating-leaves-circles li:nth-child(3) { left: 70%; width: 20px; height: 20px; animation-delay: 4s; animation-duration: 20s; }
-        .floating-leaves-circles li:nth-child(4) { left: 40%; width: 60px; height: 60px; animation-delay: 0s; animation-duration: 18s; }
-        .floating-leaves-circles li:nth-child(5) { left: 65%; width: 20px; height: 20px; animation-delay: 0s; animation-duration: 22s; }
-        .floating-leaves-circles li:nth-child(6) { left: 75%; width: 110px; height: 110px; animation-delay: 3s; animation-duration: 25s; }
-        .floating-leaves-circles li:nth-child(7) { left: 35%; width: 150px; height: 150px; animation-delay: 7s; animation-duration: 20s; }
-        .floating-leaves-circles li:nth-child(8) { left: 50%; width: 25px; height: 25px; animation-delay: 15s; animation-duration: 45s; }
-        .floating-leaves-circles li:nth-child(9) { left: 20%; width: 15px; height: 15px; animation-delay: 2s; animation-duration: 35s; }
-        .floating-leaves-circles li:nth-child(10) { left: 85%; width: 150px; height: 150px; animation-delay: 0s; animation-duration: 11s; }
+        .floating-leaves-circles li:nth-child(1) { left: 5%; width: 50px; height: 50px; animation-delay: 0s; animation-duration: 20s; }
+        .floating-leaves-circles li:nth-child(2) { left: 15%; width: 24px; height: 24px; animation-delay: 2s; animation-duration: 14s; }
+        .floating-leaves-circles li:nth-child(3) { left: 28%; width: 65px; height: 65px; animation-delay: 4s; animation-duration: 22s; }
+        .floating-leaves-circles li:nth-child(4) { left: 40%; width: 35px; height: 35px; animation-delay: 1s; animation-duration: 17s; }
+        .floating-leaves-circles li:nth-child(5) { left: 52%; width: 80px; height: 80px; animation-delay: 5s; animation-duration: 25s; }
+        .floating-leaves-circles li:nth-child(6) { left: 63%; width: 28px; height: 28px; animation-delay: 3s; animation-duration: 19s; }
+        .floating-leaves-circles li:nth-child(7) { left: 75%; width: 90px; height: 90px; animation-delay: 7s; animation-duration: 23s; }
+        .floating-leaves-circles li:nth-child(8) { left: 88%; width: 40px; height: 40px; animation-delay: 2s; animation-duration: 16s; }
+        .floating-leaves-circles li:nth-child(9) { left: 93%; width: 70px; height: 70px; animation-delay: 6s; animation-duration: 26s; }
+        .floating-leaves-circles li:nth-child(10) { left: 33%; width: 45px; height: 45px; animation-delay: 8s; animation-duration: 21s; }
+        .floating-leaves-circles li:nth-child(11) { left: 68%; width: 30px; height: 30px; animation-delay: 9s; animation-duration: 15s; }
+        .floating-leaves-circles li:nth-child(12) { left: 82%; width: 60px; height: 60px; animation-delay: 4s; animation-duration: 24s; }
 
         @keyframes float-up {
           0% {
             transform: translateY(0) rotate(0deg);
-            opacity: 1;
+            opacity: 0.45;
           }
           100% {
-            transform: translateY(-1000px) rotate(720deg);
+            transform: translateY(-1200px) rotate(720deg);
             opacity: 0;
           }
         }
       `}} />
       <ul className="floating-leaves-circles">
-        {Array.from({ length: Math.min(count, 10) }).map((_, i) => (
+        {Array.from({ length: Math.min(count, 12) }).map((_, i) => (
           <li key={i}>
-            <Feather style={{ width: '100%', height: '100%', strokeWidth: 1.5 }} />
+            <Feather style={{ width: "100%", height: "100%", strokeWidth: 1.5 }} />
           </li>
         ))}
       </ul>

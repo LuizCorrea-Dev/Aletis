@@ -101,6 +101,79 @@ export class PostgresSentinelaMemoryRepository implements ISentinelaMemoryReposi
     }
   }
 
+  /**
+   * Busca o contexto completo e atualizado do perfil do usuário:
+   * Dados cadastrais (nome, email, telefone, bio, vibes), posts, comentários, curtidas e transações de VIBES.
+   */
+  async getUserRichProfileContext(userId: string): Promise<string> {
+    try {
+      // 1. Perfil & Dados Cadastrais
+      const profileRes = await this.pool.query(
+        `SELECT u.email, p.username, p.display_name, p.full_name, p.phone, p.country_code, p.bio, p.tipo_perfil, p.vibes_balance
+         FROM users u
+         LEFT JOIN profiles p ON p.id = u.id
+         WHERE u.id = $1 LIMIT 1`,
+        [userId]
+      );
+
+      const user = profileRes.rows[0];
+      if (!user) return "";
+
+      const name = user.display_name || user.full_name || user.username || "Usuário";
+      const email = user.email || "Não informado";
+      const phone = user.phone ? `${user.country_code || ""}${user.phone}` : "Não informado";
+      const bio = user.bio || "Sem biografia";
+      const vibes = user.vibes_balance ?? 50;
+
+      // 2. Últimos 3 Posts do Usuário
+      const postsRes = await this.pool.query(
+        `SELECT content FROM posts WHERE author_id = $1 ORDER BY created_at DESC LIMIT 3`,
+        [userId]
+      );
+      const recentPosts = postsRes.rows.map((r) => `"${r.content}"`).join("; ");
+
+      // 3. Últimos 3 Comentários do Usuário
+      const commentsRes = await this.pool.query(
+        `SELECT content FROM comments WHERE author_id = $1 ORDER BY created_at DESC LIMIT 3`,
+        [userId]
+      );
+      const recentComments = commentsRes.rows.map((r) => `"${r.content}"`).join("; ");
+
+      // 4. Últimos 3 Posts Curtidos pelo Usuário
+      const likesRes = await this.pool.query(
+        `SELECT p.content FROM post_likes pl JOIN posts p ON p.id = pl.post_id WHERE pl.user_id = $1 ORDER BY pl.created_at DESC LIMIT 3`,
+        [userId]
+      );
+      const recentLikes = likesRes.rows.map((r) => `"${r.content}"`).join("; ");
+
+      // 5. Histórico de Transações de VIBES Recentes
+      const vibesRes = await this.pool.query(
+        `SELECT amount, type, description FROM vibe_transactions WHERE user_id = $1 ORDER BY created_at DESC LIMIT 3`,
+        [userId]
+      );
+      const recentVibes = vibesRes.rows.map((r) => `${r.type}: ${r.amount} VIBES`).join("; ");
+
+      const contextParts: string[] = [
+        `INFORMAÇÕES E PERFIL DO USUÁRIO:`,
+        `- Nome/Apelido: ${name}`,
+        `- Email: ${email}`,
+        `- Telefone: ${phone}`,
+        `- Biografia: ${bio}`,
+        `- Saldo de VIBES: ${vibes} VIBES`,
+      ];
+
+      if (recentPosts) contextParts.push(`- O que postou recentemente: ${recentPosts}`);
+      if (recentComments) contextParts.push(`- O que comentou recentemente: ${recentComments}`);
+      if (recentLikes) contextParts.push(`- O que curtiu/gostou: ${recentLikes}`);
+      if (recentVibes) contextParts.push(`- Movimentação de VIBES: ${recentVibes}`);
+
+      return contextParts.join("\n");
+    } catch (err) {
+      console.error("Erro ao montar contexto rico de perfil no Sentinela:", err);
+      return "";
+    }
+  }
+
   async registerInfraction(userId: string, reason: string, vibesDeducted: number = 50): Promise<boolean> {
     try {
       await this.pool.query(

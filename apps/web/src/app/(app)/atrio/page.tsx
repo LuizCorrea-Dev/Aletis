@@ -9,6 +9,7 @@ import { VibeZapButton, CommentSection } from "@/components/molecules";
 
 interface AtrioItem {
   id: string;
+  userId?: string;
   title: string;
   description: string;
   url: string;
@@ -244,6 +245,7 @@ export default function AtrioPage() {
                   <span className="font-medium text-slate-400">{item.authorName}</span>
                   <div onClick={(e) => e.stopPropagation()}>
                     <VibeZapButton
+                      recipientUserId={item.userId}
                       atrioId={item.id}
                       initialVibes={item.vibes || 0}
                       size="sm"
@@ -318,6 +320,7 @@ export default function AtrioPage() {
 
                 <div className="flex items-center gap-3">
                   <VibeZapButton
+                    recipientUserId={selectedItem.userId}
                     atrioId={selectedItem.id}
                     initialVibes={selectedItem.vibes || 0}
                     size="md"
@@ -342,7 +345,7 @@ export default function AtrioPage() {
 
               {/* Bloco Único de Comentários do Átrio */}
               <div className="pt-2">
-                <CommentSection atrioId={selectedItem.id} />
+                <CommentSection atrioId={selectedItem.id} authorId={selectedItem.userId} />
               </div>
             </div>
           </div>

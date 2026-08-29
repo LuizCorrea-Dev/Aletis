@@ -225,11 +225,15 @@ export async function transferVibeAction(input: TransferVibeInput) {
     const user = await getCurrentUser();
     if (!user) return { success: false, message: "Você precisa estar autenticado.", newBalance: 0 };
 
+    if (!input.recipientUserId) {
+      return { success: false, message: "Destinatário não informado.", newBalance: 0 };
+    }
+
     const txRepo = new PostgresTransactionRepository();
     const res = await txRepo.transferVibe(
-      input.recipientUserId || "00000000-0000-0000-0000-000000000000",
+      input.recipientUserId,
       1,
-      input.postId,
+      input.postId || input.atrioId,
       input.commentId,
       user.id
     );
@@ -242,12 +246,13 @@ export async function transferVibeAction(input: TransferVibeInput) {
           actorId: user.id,
           type: "LIKE",
           title: "Vibe Recebida",
-          content: "Você recebeu 1 Vibe em uma publicação!",
-          linkUrl: "/feed",
+          content: "Você recebeu 1 Vibe!",
+          linkUrl: input.atrioId ? "/atrio" : "/feed",
         });
       }
       revalidatePath("/");
       revalidatePath("/feed");
+      revalidatePath("/atrio");
     }
 
 
@@ -350,10 +355,47 @@ export async function createCommentAction(target: {
       user.id
     );
 
+    // Processar movimentação/recompensa de VIBES do comentário
+    let newBalance = 50;
+    let rewardResult: any = null;
+    try {
+      const txRepo = new PostgresTransactionRepository();
+      if (target.recipientUserId && target.recipientUserId !== user.id) {
+        // Transferência de Vibe para o autor do post/comentário (apoio de 2 VIBEs)
+        const transferRes = await txRepo.transferVibe(
+          target.recipientUserId,
+          2,
+          target.postId,
+          undefined,
+          user.id
+        );
+        if (transferRes.success) {
+          newBalance = transferRes.newBalance;
+          rewardResult = transferRes;
+        } else {
+          // Se não houver saldo para transferir, mantém saldo e avisa
+          newBalance = await txRepo.getBalance(user.id);
+          rewardResult = {
+            success: false,
+            message: transferRes.message || "Saldo insuficiente para transferir VIBEs.",
+          };
+        }
+      } else {
+        // Próprio post ou autor não especificado: não gera nem transfere VIBEs
+        newBalance = await txRepo.getBalance(user.id);
+        rewardResult = {
+          success: true,
+          message: "Comentário adicionado com sucesso!",
+        };
+      }
+    } catch (err) {
+      console.error("Erro ao processar transação de Vibes no comentário:", err);
+    }
+
     if (target.postId) revalidatePath("/feed");
 
     const commentItem: CommentItem = {
-      id: Date.now().toString(),
+      id: crypto.randomUUID(),
       postId: target.postId,
       atrioItemId: target.atrioId,
       parentId: target.parentId,
@@ -369,12 +411,13 @@ export async function createCommentAction(target: {
     return {
       success: true,
       data: commentItem,
-      readabilityBonusApplied: false,
-      newBalance: 1000,
+      readabilityBonusApplied: rewardResult?.breakdown?.orvalho > 0,
+      newBalance,
+      reward: rewardResult,
       sentinelaBlocked: false,
       inTimeout: false,
       penaltyApplied: false,
-      message: "Comentário adicionado com sucesso!",
+      message: rewardResult?.message || "Comentário adicionado com sucesso!",
     };
   } catch (error: any) {
     console.error("Error in createCommentAction:", error);

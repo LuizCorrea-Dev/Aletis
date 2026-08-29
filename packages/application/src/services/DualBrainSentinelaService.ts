@@ -43,7 +43,7 @@ export class DualBrainSentinelaService {
       const res = await fetch(`${this.ollamaBaseUrl}/api/embeddings`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        signal: AbortSignal.timeout(3000),
+        signal: AbortSignal.timeout(15000),
         body: JSON.stringify({
           model: this.embedModel,
           prompt: text,
@@ -65,16 +65,26 @@ export class DualBrainSentinelaService {
    */
   async processInteraction(
     content: string,
-    userId?: string
+    userId?: string,
+    isDirectChat: boolean = false,
+    userName?: string
   ): Promise<DualBrainModerationResult> {
     let userContext = "";
 
-    // 1. RAG Semântico: Busca histórico de memória contínua no pgvector
+    // 1. Busca contexto completo do perfil + RAG Semântico no pgvector
     if (userId && this.memoryRepository) {
+      let richProfile = "";
+      if (this.memoryRepository.getUserRichProfileContext) {
+        richProfile = await this.memoryRepository.getUserRichProfileContext(userId);
+      }
+
+      let memSummary = "";
       const existingMem = await this.memoryRepository.getUserMemory(userId);
       if (existingMem) {
-        userContext = existingMem.summary;
+        memSummary = `HISTÓRICO EMOCIONAL (MEMÓRIA CONTÍNUA):\n"${existingMem.summary}"`;
       }
+
+      userContext = [richProfile, memSummary].filter(Boolean).join("\n\n");
     }
 
     // 2. CÉREBRO 1 (DeepSeek-R1 Local): Moderação & Raciocínio de Risco
@@ -85,7 +95,7 @@ export class DualBrainSentinelaService {
     }
 
     // 3. CÉREBRO 2 (Llama 3.2 Local): Mentoria Empática & Suporte Emocional
-    const mentorSuggestion = await this.runMentorBrain(content, userContext);
+    const mentorSuggestion = await this.runMentorBrain(content, userContext, isDirectChat, userName);
 
     // 4. APRENDIZADO CONTÍNUO: Atualização da Memória Vetorial no pgvector em segundo plano
     if (userId && this.memoryRepository) {
@@ -117,7 +127,7 @@ export class DualBrainSentinelaService {
       const res = await fetch(`${this.ollamaBaseUrl}/v1/chat/completions`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        signal: AbortSignal.timeout(3500),
+        signal: AbortSignal.timeout(15000),
         body: JSON.stringify({
           model: this.reasoningModel,
           temperature: 0.1,
@@ -153,21 +163,29 @@ export class DualBrainSentinelaService {
    */
   private async runMentorBrain(
     content: string,
-    userContext?: string
+    userContext?: string,
+    isDirectChat: boolean = false,
+    userName?: string
   ): Promise<string | undefined> {
-    if (!this.ollamaBaseUrl || !this.ollamaBaseUrl.trim() || content.trim().length >= 100) return undefined;
+    if (!this.ollamaBaseUrl || !this.ollamaBaseUrl.trim()) return undefined;
+    if (!isDirectChat && content.trim().length >= 100) return undefined;
 
-
-    const systemPrompt =
-      "Você é o Cérebro de Mentoria Empática do Aletis. O usuário compartilhou um desabafo curto. " +
-      "Ofereça UMA frase gentil, reflexiva e acolhedora em português que o incentive a expandir se desejar." +
-      (userContext ? `\nHISTÓRICO EMOCIONAL DO AUTOR: "${userContext}"` : "");
+    const systemPrompt = isDirectChat
+      ? "Você é o Sentinela, o Mentor de Apoio Emocional e Guardião empático do Aletis. " +
+        "O usuário está conversando diretamente com você em um chat privado. " +
+        (userName ? `\nNOME/PERFIL DO USUÁRIO: "${userName}". Dirija-se ao usuário pelo seu nome (${userName}) ou pelo nome/apelido específico que ele disser ou pedir para ser chamado na conversa. ` : "") +
+        "Responda com acolhimento, empatia, escuta ativa e sabedoria em português. Mantenha a conversa natural, atenciosa e pergunte como pode apoiar." +
+        (userContext ? `\nHISTÓRICO EMOCIONAL E MEMÓRIA DO USUÁRIO: "${userContext}"` : "")
+      : "Você é o Cérebro de Mentoria Empática do Aletis. O usuário compartilhou um desabafo curto. " +
+        (userName ? `NOME DO AUTOR: "${userName}". ` : "") +
+        "Ofereça UMA frase gentil, reflexiva e acolhedora em português que o incentive a expandir se desejar." +
+        (userContext ? `\nHISTÓRICO EMOCIONAL DO AUTOR: "${userContext}"` : "");
 
     try {
       const res = await fetch(`${this.ollamaBaseUrl}/v1/chat/completions`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        signal: AbortSignal.timeout(3000),
+        signal: AbortSignal.timeout(25000),
         body: JSON.stringify({
           model: this.mentorModel,
           temperature: 0.7,
@@ -209,7 +227,7 @@ export class DualBrainSentinelaService {
       const res = await fetch(`${this.ollamaBaseUrl}/v1/chat/completions`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        signal: AbortSignal.timeout(3000),
+        signal: AbortSignal.timeout(20000),
         body: JSON.stringify({
           model: this.mentorModel,
           temperature: 0.3,
@@ -225,10 +243,10 @@ export class DualBrainSentinelaService {
           // Gerar embedding local do novo resumo
           const embedding = await this.generateEmbedding(newSummary);
 
-          if (embedding.length > 0 && typeof (this.memoryRepository as any).saveUserMemoryWithEmbedding === "function") {
-            await (this.memoryRepository as any).saveUserMemoryWithEmbedding(userId, newSummary, [], embedding);
+          if (embedding.length > 0 && typeof this.memoryRepository?.saveUserMemoryWithEmbedding === "function") {
+            await this.memoryRepository.saveUserMemoryWithEmbedding(userId, newSummary, [], embedding);
           } else {
-            await this.memoryRepository.saveUserMemory(userId, newSummary, []);
+            await this.memoryRepository?.saveUserMemory(userId, newSummary, []);
           }
         }
       }

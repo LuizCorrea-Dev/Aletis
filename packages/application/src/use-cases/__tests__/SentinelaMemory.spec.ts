@@ -60,6 +60,7 @@ describe("Sentinela — Arquitetura de Memória Contínua", () => {
       saveUserMemoryWithEmbedding: vi.fn().mockResolvedValue(true),
       registerInfraction: vi.fn().mockResolvedValue(true),
       isUserInTimeout: vi.fn().mockResolvedValue(false),
+      deleteUserMemory: vi.fn().mockResolvedValue(true),
     };
 
     useCase = new ModeratePostUseCase(postRepo, "http://localhost:11434", undefined, undefined, undefined, memoryRepo);

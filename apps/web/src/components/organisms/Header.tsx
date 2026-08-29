@@ -3,6 +3,7 @@
 import { useEffect, useState, useRef } from "react";
 import Link from "next/link";
 import { Feather, Zap, Bell, MessageSquare, UserPlus, Shield, ExternalLink, Loader2, Plus, ShoppingBag } from "lucide-react";
+import { ThemeToggle } from "@/components/shared/ThemeToggle";
 import { getUserVibesAndNotificationsAction } from "@/app/actions/user-actions";
 import { getDetailedNotificationsAction, markNotificationsAsReadAction, NotificationItem } from "@/app/actions/connection-actions";
 import { UserIdentity } from "@/components/molecules/UserIdentity";
@@ -212,6 +213,8 @@ export function Header() {
             />
           </div>
         )}
+        {/* Mode Toggle Button */}
+        <ThemeToggle />
       </div>
     </header>
   );

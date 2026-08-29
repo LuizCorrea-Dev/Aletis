@@ -53,9 +53,8 @@ function ConnectionsPageContent() {
     <main className="w-full h-[calc(100vh-100px)] max-w-6xl mx-auto flex rounded-3xl overflow-hidden border border-slate-800 bg-[#1e293b] shadow-2xl">
       {/* SIDEBAR DE CONEXÕES */}
       <div
-        className={`w-full md:w-80 lg:w-96 bg-slate-900/80 border-r border-slate-800 backdrop-blur-md flex flex-col ${
-          vm.activeChat ? "hidden md:flex" : "flex"
-        }`}
+        className={`w-full md:w-80 lg:w-96 bg-slate-900/80 border-r border-slate-800 backdrop-blur-md flex flex-col ${vm.activeChat ? "hidden md:flex" : "flex"
+          }`}
       >
         <div className="p-4 border-b border-slate-800 space-y-4">
           <h2 className="text-xl font-extrabold text-white font-display">Conexões</h2>
@@ -65,11 +64,10 @@ function ConnectionsPageContent() {
             <button
               type="button"
               onClick={() => vm.setActiveTab("friends")}
-              className={`flex-1 py-2 rounded-xl transition-all cursor-pointer ${
-                vm.activeTab === "friends"
+              className={`flex-1 py-2 rounded-xl transition-all cursor-pointer ${vm.activeTab === "friends"
                   ? "bg-[#50c878] text-[#1e293b] shadow-lg font-extrabold"
                   : "text-slate-400 hover:text-white"
-              }`}
+                }`}
             >
               Amigos ({vm.friendsCount})
             </button>
@@ -77,11 +75,10 @@ function ConnectionsPageContent() {
             <button
               type="button"
               onClick={() => vm.setActiveTab("dms")}
-              className={`flex-1 py-2 rounded-xl transition-all cursor-pointer relative ${
-                vm.activeTab === "dms"
+              className={`flex-1 py-2 rounded-xl transition-all cursor-pointer relative ${vm.activeTab === "dms"
                   ? "bg-[#50c878] text-[#1e293b] shadow-lg font-extrabold"
                   : "text-slate-400 hover:text-white"
-              }`}
+                }`}
             >
               DMs
               {vm.totalUnreadDMs > 0 && (
@@ -92,11 +89,10 @@ function ConnectionsPageContent() {
             <button
               type="button"
               onClick={() => vm.setActiveTab("favorites")}
-              className={`flex-1 py-2 rounded-xl transition-all cursor-pointer flex items-center justify-center gap-1 ${
-                vm.activeTab === "favorites"
+              className={`flex-1 py-2 rounded-xl transition-all cursor-pointer flex items-center justify-center gap-1 ${vm.activeTab === "favorites"
                   ? "bg-[#FFC300] text-[#1e293b] shadow-lg font-extrabold"
                   : "text-slate-400 hover:text-white"
-              }`}
+                }`}
             >
               <Star size={12} fill="currentColor" /> ({vm.favoritesCount})
             </button>
@@ -110,8 +106,8 @@ function ConnectionsPageContent() {
                 vm.activeTab === "friends"
                   ? "Buscar amigos..."
                   : vm.activeTab === "favorites"
-                  ? "Buscar favoritos..."
-                  : "Buscar DMs..."
+                    ? "Buscar favoritos..."
+                    : "Buscar DMs..."
               }
               value={vm.searchTerm}
               onChange={(e) => vm.setSearchTerm(e.target.value)}
@@ -131,19 +127,18 @@ function ConnectionsPageContent() {
               {vm.activeTab === "friends"
                 ? "Nenhum amigo encontrado."
                 : vm.activeTab === "favorites"
-                ? "Nenhum amigo marcado como favorito ⭐."
-                : "Nenhuma conversa DM de não-amigos."}
+                  ? "Nenhum amigo marcado como favorito ⭐."
+                  : "Nenhuma conversa DM de não-amigos."}
             </div>
           ) : (
             vm.displayedList.map((item) => (
               <div
                 key={item.id}
                 onClick={() => vm.setActiveChat(item)}
-                className={`flex items-center gap-3 p-3 rounded-2xl cursor-pointer transition-colors ${
-                  vm.activeChat?.id === item.id
+                className={`flex items-center gap-3 p-3 rounded-2xl cursor-pointer transition-colors ${vm.activeChat?.id === item.id
                     ? "bg-slate-800 text-white border-l-4 border-l-[#50c878]"
                     : "hover:bg-slate-800/50 text-slate-300 border-l-4 border-l-transparent"
-                }`}
+                  }`}
               >
                 <div className="relative shrink-0">
                   <img
@@ -152,9 +147,8 @@ function ConnectionsPageContent() {
                     className="w-11 h-11 rounded-full object-cover bg-slate-800 border border-slate-700"
                   />
                   <span
-                    className={`absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-[#0f172a] ${
-                      item.status === "online" ? "bg-[#50c878]" : "bg-slate-500"
-                    }`}
+                    className={`absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-[#0f172a] ${item.status === "online" ? "bg-[#50c878]" : "bg-slate-500"
+                      }`}
                   />
                 </div>
 
@@ -162,8 +156,14 @@ function ConnectionsPageContent() {
                   <div className="flex justify-between items-baseline mb-0.5">
                     <h4 className="font-bold text-xs truncate text-white flex items-center gap-1">
                       {item.name}
-                      {item.isCloseFriend && (
-                        <Star size={12} className="text-[#FFC300] fill-[#FFC300]" />
+                      {item.id === "00000000-0000-0000-0000-000000000001" ? (
+                        <span className="bg-[#50c878]/20 text-[#50c878] border border-[#50c878]/40 text-[9px] px-1.5 py-0.5 rounded-md font-extrabold uppercase tracking-wide">
+                          IA Mentor
+                        </span>
+                      ) : (
+                        item.isCloseFriend && (
+                          <Star size={12} className="text-[#FFC300] fill-[#FFC300]" />
+                        )
                       )}
                     </h4>
                     {item.lastMessageTime && (
@@ -189,9 +189,8 @@ function ConnectionsPageContent() {
 
       {/* ÁREA PRINCIPAL DO CHAT */}
       <div
-        className={`flex-1 flex flex-col bg-[#1e293b] relative ${
-          !vm.activeChat ? "hidden md:flex" : "flex"
-        }`}
+        className={`flex-1 flex flex-col bg-[#1e293b] relative ${!vm.activeChat ? "hidden md:flex" : "flex"
+          }`}
       >
         {vm.activeChat ? (
           <>
@@ -213,8 +212,14 @@ function ConnectionsPageContent() {
                 <div>
                   <h3 className="font-extrabold text-sm text-white font-display flex items-center gap-1.5">
                     {vm.activeChat.name}
-                    {vm.activeChat.isCloseFriend && (
-                      <Star size={14} className="text-[#FFC300] fill-[#FFC300]" />
+                    {vm.activeChat.id === "00000000-0000-0000-0000-000000000001" ? (
+                      <span className="bg-[#50c878]/20 text-[#50c878] border border-[#50c878]/40 text-[10px] px-2 py-0.5 rounded-full font-extrabold uppercase tracking-wider">
+                        Guardião IA
+                      </span>
+                    ) : (
+                      vm.activeChat.isCloseFriend && (
+                        <Star size={14} className="text-[#FFC300] fill-[#FFC300]" />
+                      )
                     )}
                   </h3>
                   <span className="text-[10px] text-[#50c878] font-bold">
@@ -231,11 +236,10 @@ function ConnectionsPageContent() {
                     type="button"
                     onClick={() => vm.toggleFavoriteFriend()}
                     disabled={vm.actionLoading === "favorite"}
-                    className={`p-2 rounded-xl border transition-all cursor-pointer ${
-                      vm.activeChat.isCloseFriend
+                    className={`p-2 rounded-xl border transition-all cursor-pointer ${vm.activeChat.isCloseFriend
                         ? "bg-[#FFC300]/15 border-[#FFC300]/40 text-[#FFC300]"
                         : "bg-slate-800 border-slate-700 text-slate-400 hover:text-white"
-                    }`}
+                      }`}
                     title={vm.activeChat.isCloseFriend ? "Remover dos Favoritos" : "Adicionar aos Favoritos"}
                   >
                     <Star
@@ -249,11 +253,10 @@ function ConnectionsPageContent() {
                 <button
                   type="button"
                   onClick={vm.toggleFollow}
-                  className={`px-3 py-1.5 text-xs font-bold rounded-xl transition-all cursor-pointer ${
-                    vm.activeChat.isFollowing
+                  className={`px-3 py-1.5 text-xs font-bold rounded-xl transition-all cursor-pointer ${vm.activeChat.isFollowing
                       ? "bg-slate-800 border border-slate-700 text-slate-300 hover:border-red-500 hover:text-red-400"
                       : "bg-slate-800 hover:bg-slate-700 text-white border border-slate-700"
-                  }`}
+                    }`}
                 >
                   {vm.activeChat.isFollowing ? "Seguindo" : "+ Seguir"}
                 </button>
@@ -350,11 +353,10 @@ function ConnectionsPageContent() {
                       className={`flex ${isMe ? "justify-end" : "justify-start"}`}
                     >
                       <div
-                        className={`max-w-[85%] md:max-w-[65%] rounded-2xl p-3.5 text-xs leading-relaxed shadow-md ${
-                          isMe
+                        className={`max-w-[85%] md:max-w-[65%] rounded-2xl p-3.5 text-xs leading-relaxed shadow-md ${isMe
                             ? "bg-[#50c878] text-[#1e293b] font-medium rounded-tr-none"
                             : "bg-slate-800 text-slate-100 rounded-tl-none border border-slate-700"
-                        }`}
+                          }`}
                       >
                         {/* Imagem / Vídeo / Documento PDF */}
                         {msg.mediaUrl && (
@@ -398,11 +400,10 @@ function ConnectionsPageContent() {
                         {/* Convite de Grupo / Cargo */}
                         {msg.type === "promotion_request" && inviteData && (
                           <div
-                            className={`rounded-xl p-3 border ${
-                              isMe
+                            className={`rounded-xl p-3 border ${isMe
                                 ? "bg-black/10 border-white/20"
                                 : "bg-slate-900/60 border-slate-700"
-                            }`}
+                              }`}
                           >
                             <div className="flex items-center gap-2 mb-2 font-bold text-xs uppercase tracking-wide text-amber-400">
                               <Shield size={16} /> Convite Oficial de Grupo
@@ -425,9 +426,8 @@ function ConnectionsPageContent() {
                         )}
 
                         <div
-                          className={`flex items-center justify-end gap-1 mt-1 text-[9px] font-bold ${
-                            isMe ? "opacity-75" : "text-slate-400"
-                          }`}
+                          className={`flex items-center justify-end gap-1 mt-1 text-[9px] font-bold ${isMe ? "opacity-75" : "text-slate-400"
+                            }`}
                         >
                           <span>{msg.timestamp}</span>
                           {isMe && <CheckCheck size={12} />}
@@ -436,6 +436,14 @@ function ConnectionsPageContent() {
                     </div>
                   );
                 })
+              )}
+              {vm.isTypingSentinela && (
+                <div className="flex justify-start">
+                  <div className="bg-slate-800 text-slate-300 rounded-2xl rounded-tl-none p-3.5 border border-slate-700 text-xs flex items-center gap-2 shadow-lg">
+                    <Loader2 size={14} className="animate-spin text-[#50c878]" />
+                    <span>O Sentinela está refletindo...</span>
+                  </div>
+                </div>
               )}
               <div ref={chatBottomRef} />
             </div>

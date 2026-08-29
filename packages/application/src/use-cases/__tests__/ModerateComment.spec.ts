@@ -55,6 +55,7 @@ describe("ModerateCommentUseCase — O Rigor das Respostas", () => {
       saveUserMemory: vi.fn().mockResolvedValue(true),
       registerInfraction: vi.fn().mockResolvedValue(true),
       isUserInTimeout: vi.fn().mockResolvedValue(false),
+      deleteUserMemory: vi.fn().mockResolvedValue(true),
     };
 
     useCase = new ModerateCommentUseCase("http://localhost:11434", undefined, undefined, undefined, memoryRepo);
@@ -97,6 +98,42 @@ describe("ModerateCommentUseCase — O Rigor das Respostas", () => {
     expect(result.success).toBe(false);
     expect(result.safe).toBe(false);
     expect(result.message).toContain("repetição excessiva");
+    expect(memoryRepo.registerInfraction).not.toHaveBeenCalled();
+  });
+
+  it("deve barrar comentário com keyboard mash e caracteres inválidos como '<' na Camada 1 ($0)", async () => {
+    const result = await useCase.execute({
+      ...mockComment,
+      content: "iugpiygpiygnyttsyigiytvutrcutirciyktjfvotitrxdy6ewa<6zy4wretusrdic9voyiçukhjnpluhjvjgfdyrwasz6reydxfc8viyotfyugpb",
+    });
+
+    expect(result.success).toBe(false);
+    expect(result.safe).toBe(false);
+    expect(result.message).toContain("Sentinela detectou");
+    expect(memoryRepo.registerInfraction).not.toHaveBeenCalled();
+  });
+
+  it("deve barrar comentário com keyboard mash contendo maiúsculas alternadas e trigramas repetidos na Camada 1 ($0)", async () => {
+    const result = await useCase.execute({
+      ...mockComment,
+      content: "xQEAFwerfwe GEwrdfWERF ewfWEF wedf WEFD WEf wef WEFwefW EFwe fWE Fwef WEF wef feWEFega465h 5hwh a5H 54",
+    });
+
+    expect(result.success).toBe(false);
+    expect(result.safe).toBe(false);
+    expect(result.message).toContain("Sentinela detectou");
+    expect(memoryRepo.registerInfraction).not.toHaveBeenCalled();
+  });
+
+  it("deve barrar comentário com keyboard mash alfanumérico e palavras sem vogais na Camada 1 ($0)", async () => {
+    const result = await useCase.execute({
+      ...mockComment,
+      content: "CKBRUYEHGF8PNOIV 8575HGNG85 95GJO KGJG 12MVFJR GJKG KEKE FUTYBGH BASH FOGO 4U4B F RYRBN WHER 66997M T",
+    });
+
+    expect(result.success).toBe(false);
+    expect(result.safe).toBe(false);
+    expect(result.message).toContain("Sentinela detectou");
     expect(memoryRepo.registerInfraction).not.toHaveBeenCalled();
   });
 
