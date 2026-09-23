@@ -1,0 +1,51 @@
+/* Tema Light (Aletis Light Mode) */
+[data-theme="light"] {
+  color-scheme: light;
+
+  /* Paleta Primária - Mint (Ajustado para maior saturação no claro) */
+  --theme-mint-400: #1FA97D;
+  --theme-mint-500: #18986d;
+  --theme-mint-600: #13835e;
+  --theme-mint-soft: #E3F4EC; /* Fundo de tags/badges */
+
+  /* Paleta Secundária - Gold (VIBES) */
+  --theme-gold-400: #C4820A;
+  --theme-gold-500: #b07509;
+  --theme-gold-600: #996507;
+  --theme-gold-soft: #FBEFD6; /* Fundo soft para VIBES */
+
+  /* Outros Accents */
+  --theme-teal: #0E7C86; /* Orvalho */
+  --theme-teal-soft: #DFF3F1;
+  
+  --theme-red: #B3402F; /* Alerta / SOS */
+  --theme-red-soft: #FBE7E2;
+
+  /* Variáveis Semânticas do Tema */
+  --theme-background: #F7F5F0; /* Cream quente, evita frieza clínica */
+  --theme-foreground: #14213D; /* Navy escuro para o texto primário */
+
+  --theme-surface: #FFFFFF; /* Superfície de cards com borda sutil */
+  --theme-surface-hover: #f1f5f9; 
+  --theme-surface-active: #e2e8f0; 
+
+  --theme-input-bg: #FFFFFF;
+  --theme-input-text: #14213D;
+  --theme-input-placeholder: #5C6472;
+
+  --theme-border: #E4E0D6; /* Linhas entre elementos, contornos de tags */
+  --theme-border-subtle: #E4E0D6;
+
+  --theme-muted: #5C6472; /* Texto secundário (metadados, timestamps) */
+  --theme-muted-foreground: #5C6472; 
+
+  /* Destaques e Ações (CTA Principal) */
+  /* Inverte a lógica do dark mode: aqui o navy vira o "peso" que ancora a página */
+  --theme-primary: #14213D;
+  --theme-primary-hover: #0d1628;
+  --theme-primary-active: #09101d;
+  --theme-primary-foreground: #F7F5F0;
+
+  --theme-accent: #1FA97D;
+  --theme-accent-hover: #18986d;
+}

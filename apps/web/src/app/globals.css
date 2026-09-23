@@ -3,6 +3,31 @@
 @import "../styles/themes/index.css";
 
 @theme {
+  /* Cores Slow Tech para Landing Page */
+  --color-sage-50: #f6f8f6;
+  --color-sage-100: #ecf3ed;
+  --color-sage-200: #dce7de;
+  --color-sage-300: #c2d5c5;
+  --color-sage-400: #8ba990;
+  --color-sage-500: #588062;
+  --color-sage-600: #3f684a;
+  --color-sage-700: #31513a;
+  --color-sage-800: #253e2d;
+  --color-sage-900: #1b2d21;
+  --color-sage-950: #0f1a13;
+
+  --color-cream-50: #faf8f5;
+  --color-cream-100: #f4efe7;
+  --color-cream-200: #e8ded1;
+  --color-cream-300: #d8c7b3;
+  --color-cream-400: #c3ad94;
+
+  /* Landing Page Brand Colors */
+  --color-navy: #0F172A;
+  --color-cream: #FAF8F3;
+  --color-mint: #2FBF8F;
+  --color-peach: #E8C9A0;
+
   /* Cores Dinâmicas de Temas */
   --color-mint-400: var(--theme-mint-400);
   --color-mint-500: var(--theme-mint-500);
@@ -38,8 +63,8 @@
   --color-tier-verificado: var(--tier-verificado-color);
 
   /* Fontes Customizadas */
-  --font-sans: var(--font-sans);
-  --font-display: var(--font-display);
+  --font-sans: 'Manrope', sans-serif;
+  --font-display: 'Fraunces', serif;
 
   /* Raio de Bordas */
   --radius-sm: var(--radius-sm);
@@ -75,4 +100,20 @@ body {
   );
   background-size: 200% 100%;
   animation: shimmer 2s infinite linear;
+}
+
+/* Custom subtle scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #f4efe7;
+}
+::-webkit-scrollbar-thumb {
+  background: #c2d5c5;
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #8ba990;
 }
